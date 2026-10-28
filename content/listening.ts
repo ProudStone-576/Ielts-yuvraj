@@ -1,0 +1,248 @@
+import type { ListeningTest } from "@/lib/types";
+
+export const LISTENING_TESTS: ListeningTest[] = [
+  {
+    id: "test-1",
+    title: "Listening — Test 1",
+    description: "Full test: 4 parts, 40 questions, about 30 minutes.",
+    parts: [
+      {
+        title: "Part 1",
+        context: "A woman is phoning a leisure centre to join as a new member.",
+        voices: {
+          Receptionist: { lang: "en-GB", pitch: 1 },
+          Sarah: { lang: "en-AU", pitch: 1.15 },
+        },
+        script: [
+          { speaker: "Receptionist", text: "Good morning, Greenfield Leisure Centre, how can I help?" },
+          { speaker: "Sarah", text: "Hi. I've just moved to the area and I'd like to become a member, please." },
+          { speaker: "Receptionist", text: "Of course. I can take your details over the phone. Could I have your name?" },
+          { speaker: "Sarah", text: "Yes, it's Sarah Marchetti." },
+          { speaker: "Receptionist", text: "Could you spell your surname for me?" },
+          { speaker: "Sarah", text: "Sure. M, A, R, C, H, E, T, T, I." },
+          { speaker: "Receptionist", text: "Thank you. And your address?" },
+          { speaker: "Sarah", text: "It's 47 Hillcrest Road. I nearly said 74 — I've only been there a week!" },
+          { speaker: "Receptionist", text: "No problem. 47 Hillcrest Road. And the postcode?" },
+          { speaker: "Sarah", text: "W, K, 4, 9, D, P." },
+          { speaker: "Receptionist", text: "Lovely. And a contact phone number?" },
+          { speaker: "Sarah", text: "My mobile is 0 7 7 0 0, 9 0 0, 3 1 5." },
+          { speaker: "Receptionist", text: "Thanks. Now, we have three types of membership. Standard membership gives you access at any time and costs 45 dollars a month. Off-peak is for weekdays before 4 pm and weekends, and that's 32 dollars. And there's a family option too." },
+          { speaker: "Sarah", text: "Well, I was thinking standard, but I work evening shifts, so I'm free during the day. Off-peak makes more sense." },
+          { speaker: "Receptionist", text: "Good choice. So that's 32 dollars a month. Is there any particular activity you're interested in?" },
+          { speaker: "Sarah", text: "I used to play a lot of tennis, but my knee isn't great any more, so it's really the swimming I want to do." },
+          { speaker: "Receptionist", text: "Our pool is excellent. All new members are offered a free session. You can choose a nutrition talk or a fitness assessment." },
+          { speaker: "Sarah", text: "I'll take the fitness assessment, please. I'd like to know where I'm starting from." },
+          { speaker: "Receptionist", text: "Great. When would you like your membership to start? The earliest is the 12th of June." },
+          { speaker: "Sarah", text: "I'm away that weekend. Could it start on the 14th?" },
+          { speaker: "Receptionist", text: "Certainly, the 14th of June. And just for our records, how did you hear about us? Was it our website?" },
+          { speaker: "Sarah", text: "A friend did mention you, but actually I saw your advert in the local newspaper." },
+          { speaker: "Receptionist", text: "Lovely, that's everything. Welcome to Greenfield!" },
+        ],
+        groups: [
+          {
+            instructions: "Complete the form below. Write ONE WORD AND/OR A NUMBER for each answer.\n\nGreenfield Leisure Centre — New Member Form",
+            questions: [
+              { id: "l1-1", type: "text", prompt: "Name: Sarah ______", answer: ["Marchetti"] },
+              { id: "l1-2", type: "text", prompt: "Address: ______ Hillcrest Road", answer: ["47"] },
+              { id: "l1-3", type: "text", prompt: "Postcode: ______", answer: ["WK4 9DP", "WK49DP"] },
+              { id: "l1-4", type: "text", prompt: "Phone: ______", answer: ["07700900315", "07700 900315", "07700 900 315"] },
+              { id: "l1-5", type: "text", prompt: "Membership type: ______", answer: ["off-peak", "off peak", "offpeak"] },
+              { id: "l1-6", type: "text", prompt: "Monthly fee: $______", answer: ["32"] },
+              { id: "l1-7", type: "text", prompt: "Main activity: ______", answer: ["swimming"] },
+              { id: "l1-8", type: "text", prompt: "Free session: ______ assessment", answer: ["fitness"] },
+              { id: "l1-9", type: "text", prompt: "Start date: ______", answer: ["14 June", "June 14", "14th June", "June 14th", "14th of June", "the 14th of June"] },
+              { id: "l1-10", type: "text", prompt: "Heard about the centre from: ______", answer: ["newspaper", "a newspaper", "the newspaper"] },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Part 2",
+        context: "You will hear a festival organiser talking on local radio about the Riverside Festival.",
+        voices: {
+          Presenter: { lang: "en-GB", pitch: 0.95 },
+          Organiser: { lang: "en-US", pitch: 1.1 },
+        },
+        script: [
+          { speaker: "Presenter", text: "With me today is Jo Patel, the organiser of this year's Riverside Festival. Welcome, Jo." },
+          { speaker: "Organiser", text: "Thanks for having me. We're really excited about this year. For the last six years the festival has run over two days, but because it's become so popular, this year it will run for three days, from Friday to Sunday." },
+          { speaker: "Organiser", text: "One big change is that the main stage has moved from the old cricket ground to Mill Park. Some people have assumed that's because of the noise complaints we had from residents last year, but in fact we'd sorted that out by changing the finishing times. The real reason is simply that we needed more space for the bigger audiences we're expecting." },
+          { speaker: "Organiser", text: "Now, tickets. You can buy them from the tourist office or at the gate on the day, but the cheapest way by far is to buy online before the first of June, when there's a twenty per cent discount." },
+          { speaker: "Organiser", text: "We want the festival to be family-friendly, so children under twelve get in free, and young people from thirteen to sixteen pay half price." },
+          { speaker: "Organiser", text: "Getting there: there is a small car park, but it fills up very quickly. There's bicycle parking too, but honestly, we strongly recommend the free shuttle bus, which runs every ten minutes from the train station." },
+          { speaker: "Organiser", text: "Let me run through some highlights. Things kick off on Friday evening with the opening parade along the river. Also on Friday, later that night, there's a jazz concert in the main tent." },
+          { speaker: "Organiser", text: "The fireworks display will be on Saturday night — the biggest we've ever had. The craft workshops were originally planned for Saturday, but we've moved them to Sunday so they don't clash with the sports events." },
+          { speaker: "Organiser", text: "And finally, for younger visitors, the children's theatre will perform on Sunday afternoon, which is always a lovely way to finish the weekend." },
+          { speaker: "Presenter", text: "It sounds fantastic. Jo Patel, thank you." },
+        ],
+        groups: [
+          {
+            instructions: "Choose the correct letter, A, B or C.",
+            questions: [
+              { id: "l1-11", type: "mcq", prompt: "How long will the festival last this year?", options: ["two days", "three days", "one week"], answer: "B" },
+              {
+                id: "l1-12",
+                type: "mcq",
+                prompt: "Why has the main stage been moved?",
+                options: ["Residents complained about the noise.", "The old site was damaged by flooding.", "More space was needed."],
+                answer: "C",
+              },
+              {
+                id: "l1-13",
+                type: "mcq",
+                prompt: "Tickets are cheapest if you buy them",
+                options: ["online before 1 June.", "at the gate.", "from the tourist office."],
+                answer: "A",
+              },
+              { id: "l1-14", type: "mcq", prompt: "Children can attend for free if they are under", options: ["5.", "12.", "16."], answer: "B" },
+              {
+                id: "l1-15",
+                type: "mcq",
+                prompt: "The organiser recommends that visitors travel by",
+                options: ["car.", "shuttle bus.", "bicycle."],
+                answer: "B",
+              },
+            ],
+          },
+          {
+            instructions: "On which day will each event take place? Choose the correct letter, A, B or C.",
+            options: [
+              { value: "A", label: "Friday" },
+              { value: "B", label: "Saturday" },
+              { value: "C", label: "Sunday" },
+            ],
+            questions: [
+              { id: "l1-16", type: "select", prompt: "Opening parade", answer: "A" },
+              { id: "l1-17", type: "select", prompt: "Children's theatre", answer: "C" },
+              { id: "l1-18", type: "select", prompt: "Fireworks", answer: "B" },
+              { id: "l1-19", type: "select", prompt: "Craft workshops", answer: "C" },
+              { id: "l1-20", type: "select", prompt: "Jazz concert", answer: "A" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Part 3",
+        context: "Two students, Tom and Leila, are preparing a presentation on food waste for their community course.",
+        voices: {
+          Tom: { lang: "en-GB", pitch: 0.9 },
+          Leila: { lang: "en-US", pitch: 1.2 },
+        },
+        script: [
+          { speaker: "Tom", text: "So, Leila, our tutor said we could choose any environmental topic. Remind me why we went for food waste?" },
+          { speaker: "Leila", text: "Well, it's because of my job at the supermarket. I see so much food thrown away every evening, and I wanted to understand why. There wasn't actually that much research on our area, which made it harder." },
+          { speaker: "Tom", text: "Right. And what surprised you most in our survey results?" },
+          { speaker: "Leila", text: "Honestly, I'd assumed restaurants and shops were the worst offenders. But it turns out most food waste comes from households — people's own kitchens." },
+          { speaker: "Tom", text: "Same for me. And remember, we started with the online questionnaire, but hardly anyone filled it in." },
+          { speaker: "Leila", text: "Yes, so the face-to-face interviews in the shopping centre were where we got most of our data. Phoning people would have taken far too long." },
+          { speaker: "Tom", text: "Now, looking at the draft, I think it's about the right length, and the photos work well. My worry is that we've packed in too many statistics. The audience will get lost in all the numbers." },
+          { speaker: "Leila", text: "Fair point. We could cut some of the tables. What about the ending? You suggested a short video." },
+          { speaker: "Tom", text: "I did, but there's no guarantee the projector sound will work." },
+          { speaker: "Leila", text: "I think a quick quiz for the audience would be better anyway. It gets people involved." },
+          { speaker: "Tom", text: "OK, you've convinced me. A quiz it is. Let's split the jobs. Can you design the slides? You're much better at that than me." },
+          { speaker: "Leila", text: "Sure, I'll do the slides. Could you contact the food bank to ask for their latest figures?" },
+          { speaker: "Tom", text: "Yes, I'll call them tomorrow. What about the introduction?" },
+          { speaker: "Leila", text: "I think we should write that together, so it sounds like both of us." },
+          { speaker: "Tom", text: "Agreed. And I'll prepare the handouts, since I've got access to the printer at work." },
+          { speaker: "Leila", text: "Great. Then I'll book the room for our practice session — I need to go to the office anyway." },
+        ],
+        groups: [
+          {
+            instructions: "Choose the correct letter, A, B or C.",
+            questions: [
+              {
+                id: "l1-21",
+                type: "mcq",
+                prompt: "Why did the students choose food waste as their topic?",
+                options: ["because of Leila's work experience", "because their tutor suggested it", "because there was a lot of local research"],
+                answer: "A",
+              },
+              {
+                id: "l1-22",
+                type: "mcq",
+                prompt: "What surprised the students about their findings?",
+                options: ["Most waste comes from households.", "Restaurants waste the most food.", "Shops waste less than expected."],
+                answer: "A",
+              },
+              {
+                id: "l1-23",
+                type: "mcq",
+                prompt: "Which method provided most of their data?",
+                options: ["an online questionnaire", "face-to-face interviews", "telephone calls"],
+                answer: "B",
+              },
+              {
+                id: "l1-24",
+                type: "mcq",
+                prompt: "What does Tom think is the main weakness of the presentation?",
+                options: ["It is too long.", "It does not have enough pictures.", "It has too many statistics."],
+                answer: "C",
+              },
+              {
+                id: "l1-25",
+                type: "mcq",
+                prompt: "How will they end the presentation?",
+                options: ["with a short video", "with a quiz for the audience", "with a list of recommendations"],
+                answer: "B",
+              },
+            ],
+          },
+          {
+            instructions: "Who will do each task? Choose the correct letter, A, B or C.",
+            options: [
+              { value: "A", label: "Tom" },
+              { value: "B", label: "Leila" },
+              { value: "C", label: "both Tom and Leila" },
+            ],
+            questions: [
+              { id: "l1-26", type: "select", prompt: "design the slides", answer: "B" },
+              { id: "l1-27", type: "select", prompt: "contact the food bank", answer: "A" },
+              { id: "l1-28", type: "select", prompt: "write the introduction", answer: "C" },
+              { id: "l1-29", type: "select", prompt: "prepare the handouts", answer: "A" },
+              { id: "l1-30", type: "select", prompt: "book the room", answer: "B" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Part 4",
+        context: "You will hear part of a talk about the history of the bicycle.",
+        voices: {
+          Lecturer: { lang: "en-GB", pitch: 1, rate: 0.95 },
+        },
+        script: [
+          { speaker: "Lecturer", text: "Today I'm going to talk about the history of the bicycle, a machine that changed transport and society in ways people rarely think about." },
+          { speaker: "Lecturer", text: "The first two-wheeled machine appeared in Germany in 1817. It was known as the running machine, because riders pushed themselves along with their feet. Crucially, it had no pedals." },
+          { speaker: "Lecturer", text: "In the 1860s, inventors in France attached pedals directly to the front wheel. This was a big step forward, but these early machines were heavy and uncomfortable." },
+          { speaker: "Lecturer", text: "Next came the penny-farthing, with its enormous front wheel. The large wheel meant each turn of the pedals carried the rider further, which greatly increased speed. Unfortunately, riders sat so high that falls were common and often serious." },
+          { speaker: "Lecturer", text: "The real breakthrough was the so-called safety bicycle of 1885. It used a chain to drive the back wheel, and its two wheels were the same size, which made it far more stable." },
+          { speaker: "Lecturer", text: "Then, in 1888, John Dunlop developed air-filled tyres. Before this, wheels were made of solid rubber or even wood, so his tyres made riding far more comfortable." },
+          { speaker: "Lecturer", text: "The social impact was enormous. For women in particular, the bicycle offered a new kind of independence, allowing them to travel without a chaperone. It even influenced fashion, as heavy skirts gave way to more practical clothing." },
+          { speaker: "Lecturer", text: "The bicycle also played a part in the history of flight. The Wright brothers, who built the first successful powered aircraft, earned their living running a bicycle shop, and used many of the same engineering ideas." },
+          { speaker: "Lecturer", text: "And today? Many cities are investing in separated cycle lanes to improve safety, and bike-sharing schemes are common. Electric bikes, in particular, have become popular with commuters, who can arrive at work without being exhausted." },
+        ],
+        groups: [
+          {
+            instructions: "Complete the notes below. Write ONE WORD ONLY for each answer.\n\nThe History of the Bicycle",
+            questions: [
+              { id: "l1-31", type: "text", prompt: "1817 'running machine' (Germany): had no ______", answer: ["pedals"] },
+              { id: "l1-32", type: "text", prompt: "1860s: pedals attached to the front ______", answer: ["wheel"] },
+              { id: "l1-33", type: "text", prompt: "Penny-farthing: large wheel increased ______, but falls were common", answer: ["speed"] },
+              { id: "l1-34", type: "text", prompt: "1885 safety bicycle: chain drive; wheels the same ______", answer: ["size"] },
+              { id: "l1-35", type: "text", prompt: "1888: Dunlop's air-filled ______ improved comfort", answer: ["tyres", "tires"] },
+              { id: "l1-36", type: "text", prompt: "Gave women more ______", answer: ["independence"] },
+              { id: "l1-37", type: "text", prompt: "Changed ______ — more practical clothing", answer: ["fashion"] },
+              { id: "l1-38", type: "text", prompt: "The Wright brothers ran a bicycle ______", answer: ["shop"] },
+              { id: "l1-39", type: "text", prompt: "Cities are building separated cycle ______", answer: ["lanes"] },
+              { id: "l1-40", type: "text", prompt: "Electric bikes are popular with ______", answer: ["commuters"] },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+export function getListeningTest(id: string) {
+  return LISTENING_TESTS.find((t) => t.id === id);
+}
