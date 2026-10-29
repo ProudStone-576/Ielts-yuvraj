@@ -77,12 +77,15 @@ def lang_of(voice: str) -> str:
     return "en-gb" if voice[0] == "b" else "en-us"
 
 
-def cast(test_id: str, voices: dict) -> dict:
-    """Gives each speaker in a part a distinct voice that is never the narrator's."""
+def cast(test_id: str, part: int, voices: dict) -> dict:
+    """Gives each speaker in a part a distinct voice that is never the narrator's, rotating between parts
+    so the same voice doesn't play several different people in one test."""
     used, out = {NARRATOR}, {}
+    shift = int(test_id.split("-")[-1]) + part if test_id.split("-")[-1].isdigit() else part
     for name, style in voices.items():
         sex = SEX.get((test_id, name)) or ("f" if style["pitch"] >= 1.05 else "m")
         pool = (FEMALE if sex == "f" else MALE)[style["lang"]]
+        pool = pool[shift % len(pool):] + pool[: shift % len(pool)]
         voice = next(v for v in pool if v not in used)
         used.add(voice)
         out[name] = (voice, style.get("rate") or 1.0)
@@ -126,7 +129,7 @@ def main():
             if not force and dest.exists() and key in old_timings:
                 parts.append(old_timings[key])
                 continue
-            cast_list = cast(test["id"], part["voices"])
+            cast_list = cast(test["id"], i, part["voices"])
             print(test["id"], part["id"], {k: v[0] for k, v in cast_list.items()})
             chunks, starts, t = [], [], 0.0
             for line in part["script"]:
