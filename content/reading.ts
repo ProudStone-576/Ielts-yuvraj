@@ -1,4 +1,5 @@
 import type { ReadingTest } from "@/lib/types";
+import { MORE_READING_TESTS } from "./reading-more";
 
 const HEADINGS = [
   { value: "i", label: "The economic value of honey production" },
@@ -261,6 +262,8 @@ G  For those who want to help bees, experts suggest a range of simpler actions. 
     ],
   },
 ];
+
+READING_TESTS.push(...MORE_READING_TESTS);
 
 export function getReadingTest(id: string) {
   return READING_TESTS.find((t) => t.id === id);
