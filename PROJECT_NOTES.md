@@ -40,10 +40,10 @@ The owner is not a developer. They want things explained simply, step by step, a
 - **Deployment protection:** turned OFF by the owner so the link is public (no Vercel login needed).
 - **Database:** **Neon Postgres** connected to the Vercel project (env vars `DATABASE_URL`, `POSTGRES_URL`, …
   present for production/preview/development). The app creates its own table `ielts_kv` on first use.
-- **Not yet confirmed:** sign-up / cloud save against the real Neon database. It builds and was tested end-to-end
+- **Confirmed in session 2:** sign-up / cloud save works against the real Neon database. (Old note: It builds and was tested end-to-end
   locally with an in-memory database, but the cloud session could not reach `*.vercel.app` to test the live site.
   The owner was asked to: sign up → take a test → sign in on another device → check Progress.
-  If it fails, read the Vercel runtime logs for `/api/auth/signup` and `/api/progress`.
+  If it fails, read the Vercel runtime logs for `/api/auth/signup` and `/api/progress`.)
 - **Code lives in:** the zip `ielts-coach.zip` the owner downloaded (includes full git history), and the latest
   deployment on Vercel. Now on GitHub: `ProudStone-576/Ielts-coach` (branch `main`).
 - **Old Vercel tokens** were pasted in chat and the owner was told to delete them. Always ask for a fresh,
@@ -135,10 +135,16 @@ The owner is not a developer. They want things explained simply, step by step, a
    `FEMALE`, `MALE`). Kokoro has no Australian accent. Checked by transcribing the clips with faster-whisper.
 6. **Environments:** the account has three cloud environments ("Sim" and two "Default"). This session ran in
    "Default"; domains added to the wrong one have no effect. Default now allows Hugging Face and Vercel.
-7. **Vercel ↔ GitHub:** `main` exists and is the branch to deploy, but Vercel had not built any push as of this
-   session (no deployment statuses on GitHub). The live project is in the Vercel account/team **urbanthug**; a
-   GitHub connection in a different Vercel account (e.g. Taran's) doesn't reach it. Connect the repo in the
-   urbanthug project's Settings → Git, Production Branch `main`.
+7. **Vercel ↔ GitHub:** the live project (`ielts-coach`, team **urbanthug**, id `prj_pi124NyFWsXjlwHWyzLsd8UeG7P5`)
+   has **no Git connection**. Linking via the API failed: "You need to add a Login Connection to your GitHub account
+   first" — the urbanthug Vercel account has no GitHub login; Taran's GitHub connection is in a different Vercel
+   account. **To do:** log into Vercel as urbanthug → Account Settings → Authentication → connect GitHub as
+   ProudStone-576, then link the project to `ProudStone-576/Ielts-coach` with Production Branch `main`.
+8. **Deployed** v3 (redesign + Listening fix + recorded voices) with the CLI and a token, after the owner said
+   "yes, deploy to production" (the session's safety check blocks production deploys without that). Ready at
+   https://ielts-coach-pi.vercel.app. **Cloud save confirmed on the live site:** signed up in one browser, set an
+   exam date, signed in from a fresh browser and saw it. A throwaway account `claude-test-…@example.com` remains in
+   the database.
 
 ## 6. Repositories — important
 
