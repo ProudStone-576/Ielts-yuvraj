@@ -1,263 +1,340 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { countQuestions, QuestionGroups, score, type Answers } from "@/components/Questions";
-import { bandToClb, formatBand, rawToBand } from "@/lib/scoring";
-import { playScript, speechSupported, type Playback } from "@/lib/speech";
+import { ExamFrame, Navigator } from "@/components/exam/ExamFrame";
+import { Results } from "@/components/exam/Results";
+import { useExamState } from "@/components/exam/useExamState";
+import { QuestionGroups } from "@/components/Questions";
+import { scoreBlocks } from "@/lib/exam";
+import { rawToBand } from "@/lib/scoring";
+import { getVolume, playScript, setVolume, speak, speechSupported, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { ListeningTest } from "@/lib/types";
+import { formatClock } from "@/lib/useTimer";
 
-type Mode = "exam" | "practice";
+type Phase = "intro" | "test" | "results" | "review";
+
+type Stage =
+  | { kind: "announce"; part: number }
+  | { kind: "reading"; part: number; until: number }
+  | { kind: "playing"; part: number }
+  | { kind: "check"; part: number; until: number }
+  | { kind: "final"; until: number };
+
+/** Exam timings in seconds, like the computer-delivered test. */
+const READING_TIME = 30;
+const CHECK_TIME = 30;
+const FINAL_CHECK = 120;
+
+/** Testing hook: localStorage "ielts-dev-fast" = "1" shortens all waits. */
+function scale(): number {
+  try {
+    return localStorage.getItem("ielts-dev-fast") === "1" ? 0.02 : 1;
+  } catch {
+    return 1;
+  }
+}
 
 export function ListeningRunner({ test }: { test: ListeningTest }) {
   const { store, addAttempt } = useStore();
-  const parts = useMemo(() => {
-    let start = 1;
-    return test.parts.map((p) => {
-      const entry = { part: p, start };
-      start += countQuestions(p.groups);
-      return entry;
-    });
-  }, [test]);
-  const total = parts.reduce((n, p) => n + countQuestions(p.part.groups), 0);
-
-  const [mode, setMode] = useState<Mode | null>(null);
-  const [tab, setTab] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [played, setPlayed] = useState<Set<number>>(new Set());
-  const [playing, setPlaying] = useState(false);
-  const [line, setLine] = useState(-1);
-  const [speed, setSpeed] = useState(1);
+  const blocks = useMemo(() => test.parts.map((p) => ({ label: p.title, groups: p.groups })), [test]);
+  const exam = useExamState(blocks);
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [stage, setStage] = useState<Stage | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [vol, setVol] = useState(1);
   const [supported, setSupported] = useState(true);
+  const [result, setResult] = useState<ReturnType<typeof scoreBlocks> | null>(null);
+  const [reviewLine, setReviewLine] = useState(-1);
+  const [reviewPlaying, setReviewPlaying] = useState(false);
+  const run = useRef(0);
   const playback = useRef<Playback | null>(null);
+  const answersRef = useRef(exam.answers);
+  answersRef.current = exam.answers;
 
-  useEffect(() => setSupported(speechSupported()), []);
-  useEffect(() => () => playback.current?.stop(), []);
+  useEffect(() => {
+    setSupported(speechSupported());
+    setVol(getVolume());
+  }, []);
 
-  const stop = () => {
+  // Stop everything when leaving the page.
+  useEffect(
+    () => () => {
+      run.current++;
+      playback.current?.stop();
+      if (speechSupported()) speechSynthesis.cancel();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (phase !== "test") return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [phase]);
+
+  const submit = () => {
+    run.current++;
     playback.current?.stop();
-    playback.current = null;
-    setPlaying(false);
-    setLine(-1);
+    speechSynthesis.cancel();
+    const r = scoreBlocks(blocks, answersRef.current);
+    setResult(r);
+    addAttempt({
+      module: "listening",
+      testId: test.id,
+      title: test.title,
+      band: rawToBand("listening", r.raw, exam.numbered.total),
+      raw: r.raw,
+      total: exam.numbered.total,
+      breakdown: r.breakdown,
+    });
+    setPhase("results");
   };
 
-  const play = (from = 0) => {
-    stop();
-    const p = parts[tab].part;
-    setPlaying(true);
-    setPlayed((s) => new Set(s).add(tab));
-    const pb = playScript(p.script.slice(from), p.voices, speed, (i) => setLine(i < 0 ? -1 : i + from));
+  /** Runs the whole test automatically, part by part. */
+  const start = async () => {
+    setPhase("test");
+    const id = ++run.current;
+    const alive = () => run.current === id;
+    const k = scale();
+    const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000 * k));
+
+    await speak("You will hear a number of different recordings, and you will have to answer questions on what you hear. You will hear each recording once only. Now turn to Part 1.");
+    for (let i = 0; i < test.parts.length; i++) {
+      if (!alive()) return;
+      const p = test.parts[i];
+      const nums = exam.numbered.parts[i].numbers;
+      exam.openPart(i);
+      setStage({ kind: "announce", part: i });
+      await speak(`Part ${i + 1}. ${p.context} First, you have some time to look at questions ${nums[0]} to ${nums.at(-1)}.`);
+      if (!alive()) return;
+      setStage({ kind: "reading", part: i, until: Date.now() + READING_TIME * 1000 * k });
+      await wait(READING_TIME);
+      if (!alive()) return;
+      setStage({ kind: "playing", part: i });
+      await speak(`Now listen carefully and answer questions ${nums[0]} to ${nums.at(-1)}.`);
+      if (!alive()) return;
+      playback.current = playScript(p.script, p.voices, 1, () => {});
+      await playback.current.done;
+      playback.current = null;
+      if (!alive()) return;
+      await speak(`That is the end of Part ${i + 1}. You now have ${CHECK_TIME} seconds to check your answers.`);
+      if (!alive()) return;
+      setStage({ kind: "check", part: i, until: Date.now() + CHECK_TIME * 1000 * k });
+      await wait(CHECK_TIME);
+    }
+    if (!alive()) return;
+    await speak("That is the end of the listening test. You now have two minutes to check your answers.");
+    if (!alive()) return;
+    setStage({ kind: "final", until: Date.now() + FINAL_CHECK * 1000 * k });
+    await wait(FINAL_CHECK);
+    if (alive()) submit();
+  };
+
+  const remaining = stage && "until" in stage ? Math.max(0, Math.ceil((stage.until - now) / 1000)) : null;
+  const status =
+    !stage
+      ? "Starting…"
+      : stage.kind === "announce"
+        ? `Part ${stage.part + 1} — instructions`
+        : stage.kind === "reading"
+          ? `Part ${stage.part + 1} — time to read the questions`
+          : stage.kind === "playing"
+            ? `Part ${stage.part + 1} — recording playing`
+            : stage.kind === "check"
+              ? `Part ${stage.part + 1} — check your answers`
+              : "Final check — 2 minutes";
+
+  const volumeControl = (
+    <label className="volume" title="Volume">
+      🔊
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.1}
+        value={vol}
+        onChange={(e) => {
+          setVol(Number(e.target.value));
+          setVolume(Number(e.target.value));
+        }}
+      />
+    </label>
+  );
+
+  if (phase === "intro") {
+    return (
+      <ExamFrame module="Listening" candidate={store.name} right={volumeControl}>
+        <div className="exam-intro card stack">
+          <h2>{test.title}</h2>
+          <p>
+            <b>Time: approximately 30 minutes</b>
+          </p>
+          <h4>Instructions to candidates</h4>
+          <ul>
+            <li>Answer all the questions. You can change your answers at any time during the test.</li>
+            <li>You will hear each recording ONCE only. There is no pause or replay.</li>
+            <li>Before each part you have time to read the questions, and after each part time to check your answers.</li>
+            <li>At the end of the test you have 2 minutes to check all your answers. The test then ends automatically.</li>
+          </ul>
+          <h4>Sound check</h4>
+          <p className="small">Put on your headphones, press Play and adjust the volume at the top right until you can hear clearly.</p>
+          <div className="row">
+            <button className="btn" onClick={() => speak("This is a sound check. You should hear this sentence clearly. Adjust the volume if necessary.")}>
+              ▶ Play sound check
+            </button>
+          </div>
+          {!supported && (
+            <div className="notice">
+              This browser can&apos;t play the recordings. Please open the app in Chrome, Edge or Safari for Listening.
+            </div>
+          )}
+          <p className="small muted">Chrome and Edge have the most natural voices.</p>
+          <div>
+            <button className="btn primary" disabled={!supported} onClick={start}>
+              Start test
+            </button>
+          </div>
+        </div>
+      </ExamFrame>
+    );
+  }
+
+  if (phase === "results" && result) {
+    return (
+      <ExamFrame module="Listening — Results" candidate={store.name}>
+        <div className="exam-scroll">
+          <Results
+            module="listening"
+            band={rawToBand("listening", result.raw, exam.numbered.total)}
+            target={store.target.listening}
+            raw={result.raw}
+            total={exam.numbered.total}
+            breakdown={result.breakdown}
+          >
+            <div>
+              <button
+                className="btn primary"
+                onClick={() => {
+                  exam.openPart(0);
+                  setPhase("review");
+                }}
+              >
+                Review answers with transcripts
+              </button>
+            </div>
+          </Results>
+        </div>
+      </ExamFrame>
+    );
+  }
+
+  const part = test.parts[exam.part];
+  const review = phase === "review";
+
+  const playFrom = (from: number) => {
+    playback.current?.stop();
+    setReviewPlaying(true);
+    const pb = playScript(part.script.slice(from), part.voices, 1, (i) => setReviewLine(i < 0 ? -1 : i + from));
     playback.current = pb;
     pb.done.then(() => {
       if (playback.current === pb) {
         playback.current = null;
-        setPlaying(false);
+        setReviewPlaying(false);
       }
     });
   };
 
-  const submit = () => {
-    stop();
-    setSubmitted(true);
-    const raw = parts.reduce((n, p) => n + score(p.part.groups, answers), 0);
-    addAttempt({
-      module: "listening",
-      testId: test.id,
-      title: `${test.title} (${mode === "exam" ? "exam" : "practice"} mode)`,
-      band: rawToBand("listening", raw, total),
-      raw,
-      total,
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  if (mode === null) {
-    return (
-      <div className="card stack" style={{ maxWidth: 680 }}>
-        <h2>{test.title}</h2>
-        <p>
-          {total} questions in 4 parts. The recordings are read aloud by your device&apos;s voices, so turn the
-          sound up and use headphones if you can. Chrome and Edge have the best voices.
-        </p>
-        {!supported && (
-          <div className="notice">
-            This browser can&apos;t read text aloud. Try Chrome, Edge or Safari, or use practice mode and read the
-            transcripts instead.
-          </div>
-        )}
-        <div className="grid grid-2">
-          <button className="card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => setMode("exam")}>
-            <h3>Exam mode</h3>
-            <p className="small muted" style={{ margin: 0 }}>
-              Each recording plays once, at normal speed, with no transcript — just like the real test.
-            </p>
-          </button>
-          <button className="card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => setMode("practice")}>
-            <h3>Practice mode</h3>
-            <p className="small muted" style={{ margin: 0 }}>
-              Replay, pause and slow down the audio. Good for training your ear on difficult parts.
-            </p>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const current = parts[tab];
-  const canPlay = !playing && (mode === "practice" || submitted || !played.has(tab));
-  const answered = Object.values(answers).filter((v) => v.trim() !== "").length;
-  const raw = submitted ? parts.reduce((n, p) => n + score(p.part.groups, answers), 0) : 0;
-  const band = rawToBand("listening", raw, total);
-
   return (
-    <div>
-      <div className="runner-bar row">
-        <div className="tabs" style={{ margin: 0 }}>
-          {parts.map((p, i) => (
+    <ExamFrame
+      module={review ? "Listening — Answer review" : "Listening"}
+      candidate={store.name}
+      timeLeft={!review ? remaining : null}
+      timeLabel={stage?.kind === "reading" ? "reading time" : "to check"}
+      right={
+        <>
+          {volumeControl}
+          {review && (
             <button
-              key={p.part.title}
-              className={i === tab ? "active" : ""}
-              disabled={playing && i !== tab}
-              onClick={() => setTab(i)}
-            >
-              {p.part.title}
-            </button>
-          ))}
-        </div>
-        <div className="spacer" />
-        <span className="small muted">
-          {answered}/{total} answered
-        </span>
-        {!submitted && (
-          <button
-            className="btn primary"
-            onClick={() => {
-              if (answered < total && !confirm(`You have ${total - answered} unanswered questions. Submit anyway?`)) return;
-              submit();
-            }}
-          >
-            Submit
-          </button>
-        )}
-      </div>
-
-      {submitted && (
-        <div className="card result-banner" style={{ marginBottom: "1rem" }}>
-          <div>
-            <div className="muted small">Score</div>
-            <div className="band-big">
-              {raw}/{total}
-            </div>
-          </div>
-          <div>
-            <div className="muted small">Estimated band</div>
-            <div className="band-big">{formatBand(band)}</div>
-          </div>
-          <div>
-            <div className="muted small">CLB</div>
-            <div className="band-big">{bandToClb("listening", band) || "<4"}</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            {band >= store.target.listening ? (
-              <p>🎉 At or above your target of {formatBand(store.target.listening)}.</p>
-            ) : (
-              <p>
-                Target is {formatBand(store.target.listening)} (about 35/40). Read the transcript for each part and
-                find where you lost the answer.
-              </p>
-            )}
-            <Link href="/listening" className="btn">
-              Back to Listening
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <div className="split">
-        <div className="card passage stack">
-          <div>
-            <h3>{current.part.title}</h3>
-            <p className="muted">{current.part.context}</p>
-          </div>
-          <div className="row">
-            {!playing ? (
-              <button className="btn primary" disabled={!canPlay || !supported} onClick={() => play()}>
-                ▶ {played.has(tab) ? "Play again" : "Play recording"}
-              </button>
-            ) : (
-              <>
-                <span className="small">
-                  <span className="rec-dot" /> Playing…
-                </span>
-                {(mode === "practice" || submitted) && (
-                  <button className="btn" onClick={stop}>
-                    ■ Stop
-                  </button>
-                )}
-              </>
-            )}
-            {(mode === "practice" || submitted) && (
-              <label className="row small">
-                Speed
-                <select value={speed} disabled={playing} onChange={(e) => setSpeed(Number(e.target.value))}>
-                  <option value={0.8}>0.8×</option>
-                  <option value={0.9}>0.9×</option>
-                  <option value={1}>1×</option>
-                  <option value={1.1}>1.1×</option>
-                </select>
-              </label>
-            )}
-          </div>
-          {mode === "exam" && !submitted && (
-            <p className="small muted">
-              {played.has(tab) && !playing
-                ? "This recording has been played. Check your answers, then move to the next part."
-                : "Read the questions first — you only hear the recording once."}
-            </p>
-          )}
-
-          {(submitted || (mode === "practice" && !supported)) && (
-            <div>
-              <h4>Transcript</h4>
-              {current.part.script.map((l, i) => (
-                <div
-                  key={i}
-                  className={`script-line ${i === line ? "current" : ""}`}
-                  onClick={() => supported && !playing && play(i)}
-                  style={{ cursor: supported && !playing ? "pointer" : undefined }}
-                  title={supported ? "Play from here" : undefined}
-                >
-                  <b>{l.speaker}:</b> {l.text}
-                </div>
-              ))}
-              {supported && <p className="small muted">Tip: click any line to replay from there.</p>}
-            </div>
-          )}
-        </div>
-        <div className="card">
-          <QuestionGroups
-            groups={current.part.groups}
-            start={current.start}
-            answers={answers}
-            onChange={(id, v) => setAnswers((a) => ({ ...a, [id]: v }))}
-            submitted={submitted}
-          />
-          {tab < parts.length - 1 && !playing && (
-            <button
-              className="btn"
-              style={{ marginTop: "1rem" }}
+              className="btn exam-btn"
               onClick={() => {
-                setTab(tab + 1);
-                window.scrollTo({ top: 0 });
+                playback.current?.stop();
+                setPhase("results");
               }}
             >
-              Next: {parts[tab + 1].part.title} →
+              Back to results
             </button>
           )}
+        </>
+      }
+      footer={
+        <Navigator
+          parts={exam.numbered.parts}
+          answered={exam.answered}
+          flagged={exam.flagged}
+          current={exam.current}
+          onGo={exam.go}
+          onFlag={exam.toggleFlag}
+          activePart={exam.part}
+          onPart={(i) => {
+            if (review) playback.current?.stop();
+            exam.openPart(i);
+          }}
+          extra={
+            stage?.kind === "final" && !review ? (
+              <button className="btn exam-btn" onClick={() => confirm("Submit your answers now?") && submit()}>
+                Submit
+              </button>
+            ) : undefined
+          }
+        />
+      }
+    >
+      {!review && (
+        <div className={`part-banner ${stage?.kind === "playing" ? "live" : ""}`}>
+          {stage?.kind === "playing" && <span className="rec-dot" />}
+          <b>{status}</b>
+          {remaining !== null && <span className="exam-mini-timer">{formatClock(remaining)}</span>}
+        </div>
+      )}
+      <div className={review ? "exam-split" : "exam-single"}>
+        {review && (
+          <div className="pane passage-pane">
+            <h3>{part.title} — transcript</h3>
+            <p className="muted small">{part.context} Click any line to hear it again.</p>
+            {part.script.map((l, i) => (
+              <div
+                key={i}
+                className={`script-line ${i === reviewLine ? "current" : ""}`}
+                onClick={() => !reviewPlaying && playFrom(i)}
+                style={{ cursor: reviewPlaying ? undefined : "pointer" }}
+              >
+                <b>{l.speaker}:</b> {l.text}
+              </div>
+            ))}
+            {reviewPlaying && (
+              <button className="btn" onClick={() => playback.current?.stop()}>
+                ■ Stop
+              </button>
+            )}
+          </div>
+        )}
+        <div className="pane questions-pane">
+          <div className="part-intro">
+            <b>{part.title}</b> · Questions {exam.numbered.parts[exam.part].numbers[0]}–{exam.numbered.parts[exam.part].numbers.at(-1)}
+          </div>
+          <QuestionGroups
+            groups={part.groups}
+            numberOf={exam.numbered.numberOf}
+            answers={exam.answers}
+            onChange={exam.setAnswer}
+            submitted={review}
+            current={exam.current}
+            flagged={exam.flagged}
+            onFocusQuestion={exam.setCurrent}
+          />
         </div>
       </div>
-    </div>
+    </ExamFrame>
   );
 }

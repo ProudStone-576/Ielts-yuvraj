@@ -1,4 +1,4 @@
-import type { WritingTask } from "@/lib/types";
+import type { WritingTask, WritingTest } from "@/lib/types";
 
 const T1_TIPS = [
   "Cover all three bullet points fully — missing one caps your Task Achievement score.",
@@ -207,6 +207,22 @@ Overall, while the personal and economic costs of migration should not be ignore
 
 export function getWritingTask(id: string) {
   return WRITING_TASKS.find((t) => t.id === id);
+}
+
+/** Each full test pairs one Task 1 letter with one Task 2 essay, like the real exam. */
+export const WRITING_TESTS: WritingTest[] = [
+  { id: "w-1", title: "Writing — Test 1", task1: "t1-complaint", task2: "t2-remote" },
+  { id: "w-2", title: "Writing — Test 2", task1: "t1-neighbour", task2: "t2-languages" },
+  { id: "w-3", title: "Writing — Test 3", task1: "t1-friend", task2: "t2-traffic" },
+  { id: "w-4", title: "Writing — Test 4", task1: "t1-request", task2: "t2-migration" },
+];
+
+export function getWritingTest(id: string) {
+  const test = WRITING_TESTS.find((t) => t.id === id);
+  if (!test) return undefined;
+  const t1 = getWritingTask(test.task1);
+  const t2 = getWritingTask(test.task2);
+  return t1 && t2 ? { test, tasks: [t1, t2] as [WritingTask, WritingTask] } : undefined;
 }
 
 /** Simplified public band descriptors used for self-assessment. */

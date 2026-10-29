@@ -1,192 +1,258 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { ExamFrame } from "@/components/exam/ExamFrame";
+import { Results } from "@/components/exam/Results";
 import { Rubric, rubricBand } from "@/components/Rubric";
 import { WRITING_CRITERIA } from "@/content/writing";
 import { checksFor } from "@/lib/analyse";
-import { bandToClb, countWords, formatBand } from "@/lib/scoring";
+import { countWords, formatBand, writingBand } from "@/lib/scoring";
 import { useStore } from "@/lib/storage";
-import type { WritingTask } from "@/lib/types";
-import { formatClock, useCountdown } from "@/lib/useTimer";
+import type { WritingTask, WritingTest } from "@/lib/types";
+import { useCountdown } from "@/lib/useTimer";
 
-export function WritingRunner({ task }: { task: WritingTask }) {
-  const { store, addAttempt, setDraft } = useStore();
-  const draftKey = `writing:${task.id}`;
-  const text = store.drafts[draftKey] ?? "";
+type Phase = "intro" | "test" | "assess" | "results";
 
-  const [started, setStarted] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [timeUp, setTimeUp] = useState(false);
-  const [rubric, setRubric] = useState<Record<string, number>>({});
-  const [saved, setSaved] = useState(false);
+export function WritingRunner({ test, tasks }: { test: WritingTest; tasks: [WritingTask, WritingTask] }) {
+  const { store, addAttempt, update } = useStore();
+  const keys = tasks.map((t) => `writing:${test.id}:${t.task}`);
+  const texts = keys.map((k) => store.drafts[k] ?? "");
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [tab, setTab] = useState(0);
+  const [rubrics, setRubrics] = useState<[Record<string, number>, Record<string, number>]>([{}, {}]);
+  const [finalBand, setFinalBand] = useState<number | null>(null);
 
-  const [left] = useCountdown(task.minutes * 60, started && !submitted, () => setTimeUp(true));
-  const words = countWords(text);
-  const checks = submitted ? checksFor(task.task, task.kind, text, task.minWords) : [];
-  const band = rubricBand(rubric, WRITING_CRITERIA.length);
+  const setText = (i: number, v: string) => update((s) => ({ ...s, drafts: { ...s.drafts, [keys[i]]: v } }));
+  const [left] = useCountdown(60 * 60, phase === "test", () => setPhase("assess"));
+
+  const bands = rubrics.map((r) => rubricBand(r, WRITING_CRITERIA.length));
 
   const save = () => {
-    if (band === null || saved) return;
+    if (bands[0] === null || bands[1] === null) return;
+    const band = writingBand(bands[0], bands[1]);
     addAttempt({
       module: "writing",
-      testId: task.id,
-      title: `Task ${task.task}: ${task.title}`,
+      testId: test.id,
+      title: test.title,
       band,
-      notes: `${words} words · self-assessed`,
+      notes: `Task 1: ${formatBand(bands[0])} (${countWords(texts[0])} words) · Task 2: ${formatBand(bands[1])} (${countWords(texts[1])} words)`,
     });
-    setSaved(true);
+    // Clear the drafts so the next attempt at this test starts fresh.
+    update((s) => {
+      const drafts = { ...s.drafts };
+      keys.forEach((k) => delete drafts[k]);
+      drafts[`writing-last:${test.id}`] = JSON.stringify({ t1: texts[0], t2: texts[1] });
+      return { ...s, drafts };
+    });
+    setFinalBand(band);
+    setPhase("results");
   };
 
-  return (
-    <div className="stack">
-      <div className="card">
-        <div className="row">
-          <span className="badge accent">
-            Task {task.task} · {task.kind}
-          </span>
-          <span className="muted small">
-            {task.minutes} minutes · at least {task.minWords} words
-          </span>
-        </div>
-        <p style={{ marginTop: "0.75rem", fontWeight: 500 }}>{task.prompt}</p>
-        {task.bullets && (
-          <ul style={{ margin: "0 0 0.75rem" }}>
-            {task.bullets.map((b) => (
-              <li key={b}>{b}</li>
-            ))}
+  if (phase === "intro") {
+    return (
+      <ExamFrame module="General Training Writing" candidate={store.name}>
+        <div className="exam-intro card stack">
+          <h2>{test.title}</h2>
+          <p>
+            <b>Time: 1 hour</b>
+          </p>
+          <h4>Instructions to candidates</h4>
+          <ul>
+            <li>Answer both parts.</li>
+            <li>You can change your answers at any time during the test.</li>
           </ul>
-        )}
-        {task.task === 1 ? (
-          <p className="small muted" style={{ margin: 0 }}>
-            Write at least 150 words. You do NOT need to write any addresses. Begin your letter as follows:{" "}
-            <i>{task.kind.startsWith("Formal") ? "Dear Sir or Madam," : "Dear ……,"}</i>
-          </p>
-        ) : (
-          <p className="small muted" style={{ margin: 0 }}>
-            Give reasons for your answer and include any relevant examples from your own knowledge or experience.
-            Write at least 250 words.
-          </p>
-        )}
-      </div>
-
-      <div className="row">
-        {!started && !submitted && (
-          <button className="btn primary" onClick={() => setStarted(true)}>
-            Start {task.minutes}-minute timer
-          </button>
-        )}
-        {started && !submitted && (
-          <span className={`timer ${left < 180 ? "low" : ""}`}>{timeUp ? "Time's up!" : formatClock(left)}</span>
-        )}
-        <span className={`badge ${words >= task.minWords ? "good" : ""}`}>{words} words</span>
-        <span className="small muted">Your draft saves automatically.</span>
-        <div className="spacer" />
-        {!submitted && (
-          <button
-            className="btn primary"
-            disabled={words < 20}
-            onClick={() => {
-              setSubmitted(true);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-          >
-            Finish &amp; review
-          </button>
-        )}
-      </div>
-
-      {timeUp && !submitted && (
-        <div className="notice">
-          Time is up. In the real exam you would have to stop now — finish your sentence and press Finish &amp;
-          review.
+          <h4>Information for candidates</h4>
+          <ul>
+            <li>There are two parts in this test. Part 2 contributes twice as much as Part 1 to the writing score.</li>
+            <li>Spend about 20 minutes on Part 1 and 40 minutes on Part 2.</li>
+            <li>The word count is shown under each answer. Under-length answers lose marks.</li>
+            <li>Your work saves automatically. The test ends when the hour is up.</li>
+          </ul>
+          <div>
+            <button className="btn primary" onClick={() => setPhase("test")}>
+              Start test
+            </button>
+          </div>
         </div>
-      )}
+      </ExamFrame>
+    );
+  }
 
-      {!submitted ? (
-        <textarea
-          className="essay"
-          value={text}
-          onChange={(e) => setDraft(draftKey, e.target.value)}
-          placeholder={task.task === 1 ? "Dear …" : "Start your essay here…"}
-          spellCheck={false}
-        />
-      ) : (
-        <>
-          <div className="grid grid-2">
-            <div className="card">
-              <h3>Your answer</h3>
-              <div className="model-answer">{text}</div>
-              <button className="btn" style={{ marginTop: "0.75rem" }} onClick={() => setSubmitted(false)}>
-                Keep editing
-              </button>
+  if (phase === "results" && finalBand !== null) {
+    return (
+      <ExamFrame module="Writing — Results" candidate={store.name}>
+        <div className="exam-scroll">
+          <Results module="writing" band={finalBand} target={store.target.writing}>
+            <div className="card small">
+              Task 1: band {formatBand(bands[0]!)} · Task 2: band {formatBand(bands[1]!)} — Task 2 counts double, so the
+              writing band is (Task 1 + 2 × Task 2) ÷ 3, rounded to the nearest half band.
             </div>
-            <div className="card">
-              <h3>Model answer (band 8–9)</h3>
-              <div className="model-answer">{task.modelAnswer}</div>
-            </div>
-          </div>
+          </Results>
+        </div>
+      </ExamFrame>
+    );
+  }
 
-          <div className="card">
-            <h3>Automatic checks</h3>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }} className="stack">
-              {checks.map((c) => (
-                <li key={c.text}>
-                  {c.ok ? "✅" : "⚠️"} {c.text}
-                </li>
-              ))}
-            </ul>
-            <p className="small muted" style={{ marginTop: "0.75rem", marginBottom: 0 }}>
-              These checks look at the form of your writing, not its meaning. Use them together with the rubric
-              below.
-            </p>
-          </div>
-
-          <div className="card stack">
-            <div>
-              <h3>Score yourself</h3>
-              <p className="small muted">
-                Compare your answer with the model and click the description that best matches your writing for
-                each criterion. Be strict — examiners are. Band 7 needs a 7 in most criteria.
-              </p>
+  if (phase === "assess") {
+    return (
+      <ExamFrame module="Writing — Check your work" candidate={store.name}>
+        <div className="exam-scroll">
+          <div className="results stack">
+            <div className="card coach-note">
+              <div className="coach-avatar">IC</div>
+              <div>
+                <b>Time to mark your work like an examiner.</b>
+                <p style={{ margin: "0.4rem 0 0" }}>
+                  For each task, compare your answer with the model, read the automatic checks, then click the
+                  description that matches your writing in each row. Be strict — that&apos;s how you improve.
+                </p>
+              </div>
             </div>
-            <Rubric criteria={WRITING_CRITERIA} value={rubric} onChange={(k, b) => setRubric((r) => ({ ...r, [k]: b }))} />
+            {tasks.map((t, i) => {
+              const checks = checksFor(t.task, t.kind, texts[i], t.minWords);
+              return (
+                <div key={t.id} className="card stack">
+                  <div className="row">
+                    <h2 style={{ margin: 0 }}>Part {t.task}</h2>
+                    <span className="badge">{t.kind}</span>
+                    <span className={`badge ${countWords(texts[i]) >= t.minWords ? "good" : "bad"}`}>{countWords(texts[i])} words</span>
+                  </div>
+                  <div className="grid grid-2">
+                    <div>
+                      <h4>Your answer</h4>
+                      <div className="model-answer">{texts[i] || <i className="muted">No answer written.</i>}</div>
+                    </div>
+                    <div>
+                      <h4>Model answer (band 8–9)</h4>
+                      <div className="model-answer">{t.modelAnswer}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4>Automatic checks</h4>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }} className="stack small">
+                      {checks.map((c) => (
+                        <li key={c.text}>
+                          {c.ok ? "✅" : "⚠️"} {c.text}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Rubric
+                    criteria={WRITING_CRITERIA}
+                    value={rubrics[i]}
+                    onChange={(k, b) =>
+                      setRubrics((r) => {
+                        const next = [...r] as typeof r;
+                        next[i] = { ...next[i], [k]: b };
+                        return next;
+                      })
+                    }
+                  />
+                  <div className="small">
+                    {bands[i] !== null ? (
+                      <>
+                        Part {t.task} band: <b>{formatBand(bands[i]!)}</b>
+                      </>
+                    ) : (
+                      <span className="muted">Pick one box in each row.</span>
+                    )}
+                  </div>
+                  <details className="small">
+                    <summary>Tips for this type of task</summary>
+                    <ul>
+                      {t.tips.map((tip) => (
+                        <li key={tip}>{tip}</li>
+                      ))}
+                    </ul>
+                  </details>
+                </div>
+              );
+            })}
             <div className="row">
-              {band !== null ? (
-                <>
-                  <span>
-                    Estimated Task {task.task} band: <b className="band-big" style={{ fontSize: "1.5rem" }}>{formatBand(band)}</b>
-                  </span>
-                  <span className={`badge ${band >= store.target.writing ? "good" : "warn"}`}>
-                    CLB {bandToClb("writing", band) || "<4"} · target {formatBand(store.target.writing)}
-                  </span>
-                  <div className="spacer" />
-                  {saved ? (
-                    <Link href="/writing" className="btn">
-                      ✓ Saved — back to Writing
-                    </Link>
-                  ) : (
-                    <button className="btn primary" onClick={save}>
-                      Save to progress
-                    </button>
-                  )}
-                </>
-              ) : (
-                <span className="muted small">Pick one box in each row to get your band.</span>
-              )}
+              <button className="btn primary" disabled={bands[0] === null || bands[1] === null} onClick={save}>
+                Save and see my writing band
+              </button>
+              {(bands[0] === null || bands[1] === null) && <span className="small muted">Mark both parts first.</span>}
             </div>
           </div>
+        </div>
+      </ExamFrame>
+    );
+  }
 
-          <div className="card">
-            <h3>Tips for this task</h3>
-            <ul className="small" style={{ margin: 0, paddingLeft: "1.2rem" }}>
-              {task.tips.map((t) => (
-                <li key={t}>{t}</li>
+  const t = tasks[tab];
+  return (
+    <ExamFrame
+      module="General Training Writing"
+      candidate={store.name}
+      timeLeft={left}
+      right={
+        <button className="btn exam-btn" onClick={() => confirm("Finish the writing test now?") && setPhase("assess")}>
+          Finish test
+        </button>
+      }
+      footer={
+        <div className="nav-bar">
+          <div className="nav-parts">
+            {tasks.map((task, i) => (
+              <div key={task.id} className={`nav-part ${i === tab ? "open" : ""}`}>
+                <button className="nav-part-label" onClick={() => setTab(i)}>
+                  Part {task.task}
+                  <span className="nav-count">{countWords(texts[i])} words</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <div className="part-banner">
+        <b>Part {t.task}</b>
+        <span>
+          You should spend about {t.minutes} minutes on this task. Write at least {t.minWords} words.
+        </span>
+      </div>
+      <div className="exam-split">
+        <div className="pane passage-pane">
+          <p style={{ fontWeight: 500 }}>{t.prompt}</p>
+          {t.bullets && (
+            <ul>
+              {t.bullets.map((b) => (
+                <li key={b}>{b}</li>
               ))}
             </ul>
-          </div>
-        </>
-      )}
-    </div>
+          )}
+          {t.task === 1 ? (
+            <p>
+              Write at least 150 words.
+              <br />
+              You do NOT need to write any addresses.
+              <br />
+              Begin your letter as follows:
+              <br />
+              <b>{t.kind.startsWith("Formal") ? "Dear Sir or Madam," : "Dear ……………,"}</b>
+            </p>
+          ) : (
+            <p>
+              Give reasons for your answer and include any relevant examples from your own knowledge or experience.
+              <br />
+              Write at least 250 words.
+            </p>
+          )}
+        </div>
+        <div className="pane writing-pane">
+          <textarea
+            className="essay"
+            value={texts[tab]}
+            onChange={(e) => setText(tab, e.target.value)}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="sentences"
+            aria-label={`Part ${t.task} answer`}
+          />
+          <div className="word-count">Word count: {countWords(texts[tab])}</div>
+        </div>
+      </div>
+    </ExamFrame>
   );
 }

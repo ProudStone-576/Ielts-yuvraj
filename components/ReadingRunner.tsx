@@ -1,169 +1,175 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { countQuestions, QuestionGroups, score, type Answers } from "@/components/Questions";
-import { bandToClb, formatBand, rawToBand } from "@/lib/scoring";
+import { ExamFrame, Navigator } from "@/components/exam/ExamFrame";
+import { Highlightable } from "@/components/exam/Highlightable";
+import { Results } from "@/components/exam/Results";
+import { useExamState } from "@/components/exam/useExamState";
+import { QuestionGroups } from "@/components/Questions";
+import { scoreBlocks } from "@/lib/exam";
+import { rawToBand } from "@/lib/scoring";
 import { useStore } from "@/lib/storage";
 import type { ReadingTest } from "@/lib/types";
-import { formatClock, useCountdown } from "@/lib/useTimer";
+import { useCountdown } from "@/lib/useTimer";
 
-export function ReadingRunner({ test, only }: { test: ReadingTest; only?: number }) {
+type Phase = "intro" | "test" | "results" | "review";
+
+export function ReadingRunner({ test }: { test: ReadingTest }) {
   const { store, addAttempt } = useStore();
-  // Keep the original numbering by remembering where each section starts.
-  const sections = useMemo(() => {
-    let start = 1;
-    return test.sections.map((s, i) => {
-      const entry = { section: s, index: i, start };
-      start += countQuestions(s.groups);
-      return entry;
-    });
-  }, [test]);
-  const active = only === undefined ? sections : sections.filter((s) => s.index === only);
-  const total = active.reduce((n, s) => n + countQuestions(s.section.groups), 0);
-  // 60 minutes for the full test, 20 for a single section.
-  const minutes = only === undefined ? 60 : 20;
-
-  const [tab, setTab] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
-  const [started, setStarted] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const blocks = useMemo(() => test.sections.map((s) => ({ label: s.title.replace("Section", "Part"), groups: s.groups })), [test]);
+  const exam = useExamState(blocks);
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [result, setResult] = useState<ReturnType<typeof scoreBlocks> | null>(null);
 
   const submit = () => {
-    if (submitted) return;
-    setSubmitted(true);
-    const raw = active.reduce((n, s) => n + score(s.section.groups, answers), 0);
+    if (phase !== "test") return;
+    const r = scoreBlocks(blocks, exam.answers);
+    setResult(r);
     addAttempt({
       module: "reading",
-      testId: test.id + (only !== undefined ? `-s${only + 1}` : ""),
-      title: test.title + (only !== undefined ? ` · ${test.sections[only].title}` : ""),
-      band: rawToBand("reading", raw, total),
-      raw,
-      total,
+      testId: test.id,
+      title: test.title,
+      band: rawToBand("reading", r.raw, exam.numbered.total),
+      raw: r.raw,
+      total: exam.numbered.total,
+      breakdown: r.breakdown,
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setPhase("results");
   };
 
-  const [left] = useCountdown(minutes * 60, started && !submitted, submit);
+  const [left] = useCountdown(60 * 60, phase === "test", submit);
+  const section = test.sections[exam.part];
+  const submitted = phase === "results" || phase === "review";
 
-  const raw = submitted ? active.reduce((n, s) => n + score(s.section.groups, answers), 0) : 0;
-  const band = rawToBand("reading", raw, total);
-  const answered = Object.values(answers).filter((v) => v.trim() !== "").length;
-
-  if (!started) {
+  if (phase === "intro") {
     return (
-      <div className="card stack" style={{ maxWidth: 640 }}>
-        <h2>{test.title}{only !== undefined ? ` · ${test.sections[only].title}` : ""}</h2>
-        <p>
-          {total} questions · {minutes} minutes. The timer starts when you press Start and the test is
-          submitted automatically when time runs out.
-        </p>
-        <p className="small muted">
-          In the real exam there is no extra time to transfer answers, so write them straight in. Spelling
-          counts for written answers.
-        </p>
-        <div>
-          <button className="btn primary" onClick={() => setStarted(true)}>
-            Start
-          </button>
+      <ExamFrame module="General Training Reading" candidate={store.name}>
+        <div className="exam-intro card stack">
+          <h2>{test.title}</h2>
+          <p>
+            <b>Time: 1 hour</b>
+          </p>
+          <h4>Instructions to candidates</h4>
+          <ul>
+            <li>Answer all the questions.</li>
+            <li>You can change your answers at any time during the test.</li>
+          </ul>
+          <h4>Information for candidates</h4>
+          <ul>
+            <li>There are 40 questions in this test. Each question carries one mark.</li>
+            <li>There are three parts to the test.</li>
+            <li>The test ends automatically when the time runs out.</li>
+            <li>
+              Use the navigation bar at the bottom to move between questions. Tick <b>Review</b> to mark a question you
+              want to come back to.
+            </li>
+            <li>Select words in the text to highlight them.</li>
+          </ul>
+          <div>
+            <button className="btn primary" onClick={() => setPhase("test")}>
+              Start test
+            </button>
+          </div>
         </div>
-      </div>
+      </ExamFrame>
     );
   }
 
-  const current = active[tab];
+  if (phase === "results" && result) {
+    const band = rawToBand("reading", result.raw, exam.numbered.total);
+    return (
+      <ExamFrame module="General Training Reading — Results" candidate={store.name}>
+        <div className="exam-scroll">
+          <Results
+            module="reading"
+            band={band}
+            target={store.target.reading}
+            raw={result.raw}
+            total={exam.numbered.total}
+            breakdown={result.breakdown}
+          >
+            <div>
+              <button className="btn primary" onClick={() => setPhase("review")}>
+                Review answers with the passages
+              </button>
+            </div>
+          </Results>
+        </div>
+      </ExamFrame>
+    );
+  }
 
   return (
-    <div>
-      <div className="runner-bar row">
-        <div className="tabs" style={{ margin: 0 }}>
-          {active.map((s, i) => (
-            <button key={s.index} className={i === tab ? "active" : ""} onClick={() => setTab(i)}>
-              {s.section.title}
-            </button>
-          ))}
-        </div>
-        <div className="spacer" />
-        <span className="small muted">
-          {answered}/{total} answered
-        </span>
-        {!submitted && <span className={`timer ${left < 300 ? "low" : ""}`}>{formatClock(left)}</span>}
-        {!submitted && (
+    <ExamFrame
+      module={phase === "review" ? "Reading — Answer review" : "General Training Reading"}
+      candidate={store.name}
+      timeLeft={phase === "test" ? left : null}
+      right={
+        phase === "test" ? (
           <button
-            className="btn primary"
+            className="btn exam-btn"
             onClick={() => {
-              if (answered < total && !confirm(`You have ${total - answered} unanswered questions. Submit anyway?`)) return;
-              submit();
+              const missing = exam.numbered.total - exam.answered.size;
+              if (confirm(missing ? `You have ${missing} unanswered questions. Finish the test now?` : "Finish the test now?")) submit();
             }}
           >
-            Submit
+            Finish test
           </button>
-        )}
+        ) : (
+          <button className="btn exam-btn" onClick={() => setPhase("results")}>
+            Back to results
+          </button>
+        )
+      }
+      footer={
+        <Navigator
+          parts={exam.numbered.parts}
+          answered={exam.answered}
+          flagged={exam.flagged}
+          current={exam.current}
+          onGo={exam.go}
+          onFlag={exam.toggleFlag}
+          activePart={exam.part}
+          onPart={exam.openPart}
+        />
+      }
+    >
+      <div className="part-banner">
+        <b>{blocks[exam.part].label}</b>
+        <span>
+          Read the text and answer questions {exam.numbered.parts[exam.part].numbers[0]}–
+          {exam.numbered.parts[exam.part].numbers.at(-1)}.
+        </span>
       </div>
-
-      {submitted && (
-        <div className="card result-banner" style={{ marginBottom: "1rem" }}>
-          <div>
-            <div className="muted small">Score</div>
-            <div className="band-big">
-              {raw}/{total}
-            </div>
-          </div>
-          <div>
-            <div className="muted small">Estimated band</div>
-            <div className="band-big">{formatBand(band)}</div>
-          </div>
-          <div>
-            <div className="muted small">CLB</div>
-            <div className="band-big">{bandToClb("reading", band) || "<4"}</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            {band >= store.target.reading ? (
-              <p>🎉 At or above your target of {formatBand(store.target.reading)}.</p>
-            ) : (
-              <p>
-                Target is {formatBand(store.target.reading)}. Review each wrong answer below and find the exact
-                words in the passage that give the answer.
-              </p>
-            )}
-            <Link href="/reading" className="btn">
-              Back to Reading
-            </Link>
-          </div>
+      <div className="exam-split">
+        <div className="pane passage-pane">
+          <Highlightable>
+            {/* All parts stay mounted (only the current one is shown) so highlights survive switching parts. */}
+            {test.sections.map((s, i) => (
+              <div key={s.title} hidden={i !== exam.part}>
+                {s.passages.map((p) => (
+                  <article key={p.title} className="passage-article">
+                    <h3>{p.title}</h3>
+                    <div className="passage-text">{p.body}</div>
+                  </article>
+                ))}
+              </div>
+            ))}
+          </Highlightable>
         </div>
-      )}
-
-      <div className="split">
-        <div className="card passage">
-          {current.section.passages.map((p) => (
-            <div key={p.title} style={{ marginBottom: "1.5rem" }}>
-              <h3>{p.title}</h3>
-              <div className="passage-text">{p.body}</div>
-            </div>
-          ))}
-        </div>
-        <div className="card">
+        <div className="pane questions-pane">
           <QuestionGroups
-            groups={current.section.groups}
-            start={current.start}
-            answers={answers}
-            onChange={(id, v) => setAnswers((a) => ({ ...a, [id]: v }))}
+            groups={section.groups}
+            numberOf={exam.numbered.numberOf}
+            answers={exam.answers}
+            onChange={exam.setAnswer}
             submitted={submitted}
+            current={exam.current}
+            flagged={exam.flagged}
+            onFocusQuestion={exam.setCurrent}
           />
-          {tab < active.length - 1 && (
-            <button
-              className="btn"
-              style={{ marginTop: "1rem" }}
-              onClick={() => {
-                setTab(tab + 1);
-                window.scrollTo({ top: 0 });
-              }}
-            >
-              Next: {active[tab + 1].section.title} →
-            </button>
-          )}
         </div>
       </div>
-    </div>
+    </ExamFrame>
   );
 }

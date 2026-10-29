@@ -8,6 +8,16 @@ export interface VoiceStyle {
   rate?: number;
 }
 
+let volume = 1;
+
+export function setVolume(v: number) {
+  volume = Math.max(0, Math.min(1, v));
+}
+
+export function getVolume() {
+  return volume;
+}
+
 export function speechSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
@@ -25,9 +35,29 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
 /** Picks a different English voice per speaker where the device has several. */
 function pickVoice(voices: SpeechSynthesisVoice[], style: VoiceStyle, index: number) {
   const english = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
-  const exact = english.filter((v) => v.lang.toLowerCase() === style.lang.toLowerCase());
+  const exact = english.filter((v) => v.lang.toLowerCase().replace("_", "-") === style.lang.toLowerCase());
   const pool = exact.length ? exact : english;
   return pool.length ? pool[index % pool.length] : undefined;
+}
+
+/** Some browsers stop long utterances after ~15 seconds, so speak sentence by sentence. */
+function chunks(text: string): string[] {
+  const parts = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts : [text];
+}
+
+function say(text: string, voice: SpeechSynthesisVoice | undefined, style: VoiceStyle, speed: number): Promise<void> {
+  return new Promise((resolve) => {
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang ?? style.lang;
+    u.pitch = style.pitch;
+    u.rate = (style.rate ?? 1) * speed;
+    u.volume = volume;
+    u.onend = () => resolve();
+    u.onerror = () => resolve();
+    speechSynthesis.speak(u);
+  });
 }
 
 export interface Playback {
@@ -54,18 +84,12 @@ export function playScript(
     for (let i = 0; i < lines.length && !stopped; i++) {
       const line = lines[i];
       const style = styles[line.speaker] ?? { lang: "en-GB", pitch: 1 };
+      const voice = pickVoice(voices, style, Math.max(0, speakers.indexOf(line.speaker)));
       onLine(i);
-      await new Promise<void>((resolve) => {
-        const u = new SpeechSynthesisUtterance(line.text);
-        const voice = pickVoice(voices, style, Math.max(0, speakers.indexOf(line.speaker)));
-        if (voice) u.voice = voice;
-        u.lang = voice?.lang ?? style.lang;
-        u.pitch = style.pitch;
-        u.rate = (style.rate ?? 1) * speed;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        speechSynthesis.speak(u);
-      });
+      for (const part of chunks(line.text)) {
+        if (stopped) break;
+        await say(part, voice, style, speed);
+      }
       if (!stopped) await new Promise((r) => setTimeout(r, 350));
     }
     onLine(-1);
@@ -80,15 +104,11 @@ export function playScript(
   };
 }
 
-export function speak(text: string, lang = "en-GB"): Promise<void> {
-  return new Promise((resolve) => {
-    if (!speechSupported()) return resolve();
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = 0.95;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-    speechSynthesis.speak(u);
-  });
+/** The narrator / examiner voice. */
+export async function speak(text: string, lang = "en-GB"): Promise<void> {
+  if (!speechSupported()) return;
+  speechSynthesis.cancel();
+  const voices = await loadVoices();
+  const voice = pickVoice(voices, { lang, pitch: 1 }, 0);
+  for (const part of chunks(text)) await say(part, voice, { lang, pitch: 1, rate: 0.95 }, 1);
 }

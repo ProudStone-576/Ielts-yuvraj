@@ -1,89 +1,112 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { statsFor } from "@/components/BandStats";
-import { bandToClb, CLB9_TARGET, formatBand, overallBand } from "@/lib/scoring";
-import { exportBackup, importBackup, resetAll, useStore } from "@/lib/storage";
-import { MODULE_LABEL, MODULES } from "@/lib/types";
+import { recentAverage, weakAreas } from "@/lib/coach";
+import { bandToClb, formatBand, overallBand } from "@/lib/scoring";
+import { exportBackup, importBackup, resetAll, useAuth, useStore } from "@/lib/storage";
+import { MODULE_LABEL, MODULES, type Module } from "@/lib/types";
 
-const BANDS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
+/** Simple line of band scores over time for one module. */
+function Trend({ points, target }: { points: number[]; target: number }) {
+  if (points.length < 2) return <div className="small muted">Take 2+ tests to see your trend.</div>;
+  const w = 220;
+  const h = 60;
+  const y = (b: number) => h - ((b - 3) / 6) * h;
+  const x = (i: number) => (i / (points.length - 1)) * w;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="trend" role="img" aria-label="Band trend">
+      <line x1={0} x2={w} y1={y(target)} y2={y(target)} className="trend-target" />
+      <polyline points={points.map((b, i) => `${x(i)},${y(b)}`).join(" ")} className="trend-line" />
+      {points.map((b, i) => (
+        <circle key={i} cx={x(i)} cy={y(b)} r={3} className="trend-dot" />
+      ))}
+    </svg>
+  );
+}
 
 export default function ProgressPage() {
-  const { store, update } = useStore();
+  const { store, deleteAttempt } = useStore();
+  const auth = useAuth();
   const [message, setMessage] = useState("");
   const file = useRef<HTMLInputElement>(null);
 
   const attempts = [...store.attempts].reverse();
-  const averages = MODULES.map((m) => statsFor(store.attempts, m).average);
+  const averages = MODULES.map((m) => recentAverage(store.attempts, m));
   const allTried = averages.every((a) => a !== undefined);
-
-  const download = () => {
-    const blob = new Blob([exportBackup()], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `ielts-coach-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setMessage("Backup downloaded. Keep it somewhere safe, like Google Drive or email it to yourself.");
-  };
-
-  const restore = async (f: File) => {
-    try {
-      importBackup(await f.text());
-      setMessage("Backup restored.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not read that file.");
-    }
-  };
+  const weak = weakAreas(store.attempts, 6);
 
   return (
     <div className="stack">
       <div className="page-head">
         <h1>Progress</h1>
-        <p>Every test you finish is saved here, on this device.</p>
+        <p>
+          {auth.mode === "signed-in"
+            ? "Every test is saved to your account automatically — sign in on any device to see it."
+            : "Every test you finish is saved here."}
+        </p>
       </div>
 
       <div className="grid grid-4">
-        {MODULES.map((m, i) => {
-          const s = statsFor(store.attempts, m);
+        {MODULES.map((m: Module, i) => {
+          const avg = averages[i];
+          const points = store.attempts.filter((a) => a.module === m).map((a) => a.band);
           return (
-            <div key={m} className="card">
-              <div className="muted small">{MODULE_LABEL[m]} · last 3 average</div>
-              <div className="band-big">{s.average !== undefined ? formatBand(s.average) : "—"}</div>
-              <div className="small">
-                {s.average !== undefined ? `CLB ${bandToClb(m, s.average) || "<4"}` : "No attempts"} · target{" "}
-                {formatBand(store.target[m])}
+            <div key={m} className="card stack" style={{ gap: "0.4rem" }}>
+              <div className="row">
+                <span className={`mod-dot ${m}`} />
+                <b>{MODULE_LABEL[m]}</b>
+                <div className="spacer" />
+                <span className="small muted">target {formatBand(store.target[m])}</span>
               </div>
-              {averages[i] !== undefined && (
-                <div className={`progress ${averages[i]! >= store.target[m] ? "good" : ""}`} style={{ marginTop: "0.5rem" }}>
-                  <div style={{ width: `${Math.min(100, (averages[i]! / store.target[m]) * 100)}%` }} />
-                </div>
-              )}
+              <div className="band-big">{avg !== undefined ? formatBand(avg) : "—"}</div>
+              <div className="small">{avg !== undefined ? `CLB ${bandToClb(m, avg) || "<4"} · last 3 average` : "No tests yet"}</div>
+              <Trend points={points} target={store.target[m]} />
             </div>
           );
         })}
       </div>
+
       {allTried && (
         <div className="card row">
           <span>Estimated overall band:</span>
           <b className="band-big" style={{ fontSize: "1.6rem" }}>
             {formatBand(overallBand(averages as number[]))}
           </b>
-          <span className="small muted">For CLB, each module counts separately — the overall band is just for reference.</span>
+          <span className="small muted">For CLB, each module counts separately — the overall band is for reference only.</span>
+        </div>
+      )}
+
+      {weak.length > 0 && (
+        <div className="card">
+          <h3>Accuracy by question type (weakest first)</h3>
+          <table className="data">
+            <tbody>
+              {weak.map((w) => (
+                <tr key={w.module + w.skill}>
+                  <td>
+                    <span className={`mod-dot ${w.module}`} /> {w.skill}
+                  </td>
+                  <td className="small muted">{w.total} questions</td>
+                  <td>
+                    <span className={`badge ${w.accuracy < 0.6 ? "bad" : "warn"}`}>{Math.round(w.accuracy * 100)}%</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
       <div className="card">
         <h3>History</h3>
         {attempts.length === 0 ? (
-          <p className="muted">No attempts yet. Finish a test and it will appear here.</p>
+          <p className="muted">No tests yet. Finish a test and it will appear here.</p>
         ) : (
           <div className="table-scroll">
             <table className="data">
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Module</th>
                   <th>Test</th>
                   <th>Score</th>
                   <th>Band</th>
@@ -94,10 +117,11 @@ export default function ProgressPage() {
               <tbody>
                 {attempts.map((a) => (
                   <tr key={a.id}>
-                    <td>{new Date(a.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</td>
-                    <td>{MODULE_LABEL[a.module]}</td>
-                    <td>{a.title}</td>
-                    <td>{a.raw !== undefined ? `${a.raw}/${a.total}` : <span className="muted small">{a.notes}</span>}</td>
+                    <td className="small">{new Date(a.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</td>
+                    <td>
+                      <span className={`mod-dot ${a.module}`} /> {a.title}
+                    </td>
+                    <td className="small">{a.raw !== undefined ? `${a.raw}/${a.total}` : <span className="muted">{a.notes}</span>}</td>
                     <td>
                       <span className={`badge ${a.band >= store.target[a.module] ? "good" : ""}`}>{formatBand(a.band)}</span>
                     </td>
@@ -106,11 +130,8 @@ export default function ProgressPage() {
                       <button
                         className="btn danger small"
                         style={{ padding: "0.2rem 0.5rem" }}
-                        title="Delete this attempt"
-                        onClick={() => {
-                          if (confirm("Delete this attempt?"))
-                            update((s) => ({ ...s, attempts: s.attempts.filter((x) => x.id !== a.id) }));
-                        }}
+                        title="Delete this test result"
+                        onClick={() => confirm("Delete this test result?") && deleteAttempt(a.id)}
                       >
                         ✕
                       </button>
@@ -123,55 +144,25 @@ export default function ProgressPage() {
         )}
       </div>
 
-      <div className="grid grid-2">
-        <div className="card stack">
-          <h3>Settings</h3>
-          <label className="row">
-            <span style={{ minWidth: 90 }}>Name</span>
-            <input value={store.name} onChange={(e) => update((s) => ({ ...s, name: e.target.value }))} />
-          </label>
-          <label className="row">
-            <span style={{ minWidth: 90 }}>Exam date</span>
-            <input type="date" value={store.examDate} onChange={(e) => update((s) => ({ ...s, examDate: e.target.value }))} />
-          </label>
-          <div>
-            <div className="row" style={{ marginBottom: "0.5rem" }}>
-              <b>Target bands</b>
-              <div className="spacer" />
-              <button className="btn small" onClick={() => update((s) => ({ ...s, target: { ...CLB9_TARGET } }))}>
-                Reset to CLB 9
-              </button>
-            </div>
-            <div className="grid grid-2" style={{ gap: "0.5rem" }}>
-              {MODULES.map((m) => (
-                <label key={m} className="row">
-                  <span style={{ minWidth: 90 }}>{MODULE_LABEL[m]}</span>
-                  <select
-                    value={store.target[m]}
-                    onChange={(e) =>
-                      update((s) => ({ ...s, target: { ...s.target, [m]: Number(e.target.value) } }))
-                    }
-                  >
-                    {BANDS.map((b) => (
-                      <option key={b} value={b}>
-                        {formatBand(b)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
+      {auth.mode === "local" && (
         <div className="card stack">
           <h3>Backup</h3>
           <p className="small muted" style={{ margin: 0 }}>
-            Your progress is saved in this browser only. Download a backup now and then — and before changing phone
-            or clearing your browser — so nothing is ever lost. You can restore it on any device.
+            Cloud save isn&apos;t switched on for this app, so progress is stored in this browser only. Download a backup
+            now and then to keep it safe.
           </p>
           <div className="row">
-            <button className="btn primary" onClick={download}>
+            <button
+              className="btn primary"
+              onClick={() => {
+                const blob = new Blob([exportBackup()], { type: "application/json" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `ielts-coach-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+            >
               Download backup
             </button>
             <button className="btn" onClick={() => file.current?.click()}>
@@ -182,26 +173,30 @@ export default function ProgressPage() {
               type="file"
               accept="application/json,.json"
               hidden
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
-                if (f) restore(f);
                 e.target.value = "";
+                if (!f) return;
+                try {
+                  importBackup(await f.text());
+                  setMessage("Backup restored.");
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : "Could not read that file.");
+                }
               }}
             />
           </div>
           {message && <div className="notice">{message}</div>}
-          <hr style={{ border: 0, borderTop: "1px solid var(--border)", width: "100%" }} />
-          <div>
-            <button
-              className="btn danger"
-              onClick={() => {
-                if (confirm("Delete ALL progress, drafts and settings? Download a backup first if unsure.")) resetAll();
-              }}
-            >
-              Delete all data
-            </button>
-          </div>
         </div>
+      )}
+
+      <div>
+        <button
+          className="btn danger"
+          onClick={() => confirm("Delete ALL test results and settings? This cannot be undone.") && resetAll()}
+        >
+          Delete all my results
+        </button>
       </div>
     </div>
   );

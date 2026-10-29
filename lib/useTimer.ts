@@ -2,25 +2,43 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Countdown timer in seconds. Calls onExpire once when it reaches zero while running. */
-export function useCountdown(seconds: number, running: boolean, onExpire?: () => void) {
-  const [left, setLeft] = useState(seconds);
+/**
+ * Countdown timer in seconds. Calls onExpire once when it reaches zero while running.
+ * Changing `resetKey` (e.g. the current question) restarts it from `seconds`.
+ */
+export function useCountdown(
+  seconds: number,
+  running: boolean,
+  onExpire?: () => void,
+  resetKey: string | number = seconds,
+) {
+  const [state, setState] = useState({ left: seconds, key: resetKey });
+  let current = state;
+  if (state.key !== resetKey) {
+    // Restart for the new key during render so no stale "0" is ever seen.
+    current = { left: seconds, key: resetKey };
+    setState(current);
+  }
+
   const expire = useRef(onExpire);
   expire.current = onExpire;
-
-  useEffect(() => setLeft(seconds), [seconds]);
+  const fired = useRef<string | number | null>(null);
 
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setLeft((l) => Math.max(0, l - 1)), 1000);
+    const t = setInterval(() => setState((s) => ({ ...s, left: Math.max(0, s.left - 1) })), 1000);
     return () => clearInterval(t);
-  }, [running]);
+  }, [running, resetKey]);
 
   useEffect(() => {
-    if (running && left === 0) expire.current?.();
-  }, [running, left]);
+    if (running && current.left === 0 && fired.current !== current.key) {
+      fired.current = current.key;
+      expire.current?.();
+    }
+  }, [running, current.left, current.key]);
 
-  return [left, setLeft] as const;
+  const setLeft = (n: number) => setState((s) => ({ ...s, left: n }));
+  return [current.left, setLeft] as const;
 }
 
 export function formatClock(s: number): string {

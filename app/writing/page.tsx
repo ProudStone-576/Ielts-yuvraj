@@ -1,43 +1,33 @@
-import Link from "next/link";
-import { WRITING_TASKS } from "@/content/writing";
+import { TestList } from "@/components/TestList";
+import { getWritingTest, WRITING_TESTS } from "@/content/writing";
 
 export default function WritingHome() {
-  const task1 = WRITING_TASKS.filter((t) => t.task === 1);
-  const task2 = WRITING_TASKS.filter((t) => t.task === 2);
+  const tests = WRITING_TESTS.map((t) => {
+    const found = getWritingTest(t.id)!;
+    return {
+      id: t.id,
+      title: t.title,
+      description: `Part 1: ${found.tasks[0].title} (${found.tasks[0].kind.toLowerCase()}) · Part 2: ${found.tasks[1].title} (${found.tasks[1].kind.toLowerCase()})`,
+    };
+  });
   return (
     <div className="stack">
       <div className="page-head">
         <h1>Writing</h1>
         <p>
-          General Training Writing has two tasks in 60 minutes. Task 1 is a letter (150+ words, 20 minutes) and
-          Task 2 is an essay (250+ words, 40 minutes). Task 2 counts twice as much as Task 1. CLB 9 needs band 7.0.
+          Two parts in 60 minutes, just like the real test: a letter (150+ words, about 20 minutes) and an essay (250+
+          words, about 40 minutes). Part 2 counts twice as much as Part 1. CLB 9 needs band 7.0.
         </p>
       </div>
-
-      <h2>Task 1 — Letters</h2>
-      <div className="grid grid-2">
-        {task1.map((t) => (
-          <Link key={t.id} href={`/writing/${t.id}`} className="card">
-            <span className="badge">{t.kind}</span>
-            <h3 style={{ marginTop: "0.5rem" }}>{t.title}</h3>
-            <p className="small muted" style={{ margin: 0 }}>
-              {t.prompt}
-            </p>
-          </Link>
-        ))}
-      </div>
-
-      <h2 style={{ marginTop: "1rem" }}>Task 2 — Essays</h2>
-      <div className="grid grid-2">
-        {task2.map((t) => (
-          <Link key={t.id} href={`/writing/${t.id}`} className="card">
-            <span className="badge">{t.kind}</span>
-            <h3 style={{ marginTop: "0.5rem" }}>{t.title}</h3>
-            <p className="small muted" style={{ margin: 0 }}>
-              {t.prompt}
-            </p>
-          </Link>
-        ))}
+      <TestList module="writing" tests={tests} />
+      <div className="card">
+        <h3>Coach&apos;s tips for band 7</h3>
+        <ul className="small" style={{ margin: 0, paddingLeft: "1.2rem" }}>
+          <li>Letters: cover every bullet point fully and keep the tone consistent with the reader (formal, semi-formal or informal).</li>
+          <li>Essays: state your position in the introduction and keep it the same to the end. One clear main idea per body paragraph.</li>
+          <li>Plan for 3–5 minutes before writing. It always saves time later.</li>
+          <li>Leave 3 minutes to check: articles (a/the), plurals, subject–verb agreement and spelling.</li>
+        </ul>
       </div>
     </div>
   );

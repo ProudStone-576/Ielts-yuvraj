@@ -3,13 +3,13 @@ import type { Module, Question } from "./types";
 /** Official-style raw score (out of 40) to band conversion for Listening. */
 const LISTENING_TABLE: [number, number][] = [
   [39, 9], [37, 8.5], [35, 8], [32, 7.5], [30, 7], [26, 6.5], [23, 6],
-  [18, 5.5], [16, 5], [13, 4.5], [10, 4], [8, 3.5], [6, 3], [4, 2.5], [0, 0],
+  [18, 5.5], [16, 5], [13, 4.5], [10, 4], [8, 3.5], [6, 3], [4, 2.5], [3, 2], [2, 1.5], [1, 1], [0, 0],
 ];
 
 /** General Training Reading raw score (out of 40) to band conversion. */
 const GT_READING_TABLE: [number, number][] = [
   [40, 9], [39, 8.5], [37, 8], [36, 7.5], [34, 7], [32, 6.5], [30, 6],
-  [27, 5.5], [23, 5], [19, 4.5], [15, 4], [12, 3.5], [9, 3], [6, 2.5], [0, 0],
+  [27, 5.5], [23, 5], [19, 4.5], [15, 4], [12, 3.5], [9, 3], [6, 2.5], [4, 2], [2, 1.5], [1, 1], [0, 0],
 ];
 
 /**
