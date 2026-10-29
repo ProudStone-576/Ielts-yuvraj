@@ -4,6 +4,7 @@ import Link from "next/link";
 import { testFeedback } from "@/lib/coach";
 import { bandToClb, formatBand } from "@/lib/scoring";
 import type { Module, SkillScore } from "@/lib/types";
+import { YuvrajSays } from "@/components/Yuvraj";
 
 /** Score summary with the coach's comments, shown after an exam. */
 export function Results({
@@ -51,17 +52,13 @@ export function Results({
         </div>
       </div>
 
-      <div className="card coach-note">
-        <div className="coach-avatar">IC</div>
-        <div className="stack" style={{ gap: "0.5rem" }}>
-          <b>Coach&apos;s feedback</b>
-          {feedback.map((f) => (
-            <p key={f} style={{ margin: 0 }}>
-              {f}
-            </p>
-          ))}
-        </div>
-      </div>
+      <YuvrajSays title="my verdict">
+        {feedback.map((f) => (
+          <p key={f} style={{ margin: 0 }}>
+            {f}
+          </p>
+        ))}
+      </YuvrajSays>
 
       {breakdown && Object.keys(breakdown).length > 0 && (
         <div className="card">

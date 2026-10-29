@@ -1,17 +1,18 @@
+import { catalog } from "@/lib/catalog";
 import { TestList } from "@/components/TestList";
-import { SPEAKING_SETS } from "@/content/speaking";
 
 export default function SpeakingHome() {
   return (
     <div className="stack">
-      <div className="page-head">
+      <div className="page-head module-hero tint-speaking">
+        <div className="eyebrow">Practice library</div>
         <h1>Speaking</h1>
         <p>
           A face-to-face interview in three parts, 11–14 minutes, the same for General Training and Academic. The mock
           examiner asks the questions aloud and records your answers. CLB 9 needs band 7.0.
         </p>
       </div>
-      <TestList module="speaking" tests={SPEAKING_SETS.map((s) => ({ id: s.id, title: s.title, description: `Part 2: ${s.part2.cue}` }))} />
+      <TestList module="speaking" tests={catalog().speaking} />
       <div className="card">
         <h3>What band 7 sounds like</h3>
         <ul className="small" style={{ margin: 0, paddingLeft: "1.2rem" }}>

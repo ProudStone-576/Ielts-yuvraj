@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { COACH_NAME, YuvrajAvatar } from "@/components/Yuvraj";
 import { initAuth, signIn, useAuth } from "@/lib/storage";
 
 /** Shows the sign-in screen until the user is signed in (when cloud save is available). */
@@ -11,7 +12,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (auth.mode === "checking") {
-    return <div className="center-screen muted">Loading your coach…</div>;
+    return <div className="center-screen muted">Yuvraj is getting ready…</div>;
   }
   if (auth.mode === "signed-out") return <SignIn />;
   return <>{children}</>;
@@ -40,14 +41,18 @@ function SignIn() {
 
   return (
     <div className="auth-wrap">
+      <div className="auth-glow" aria-hidden />
       <div className="card auth-card stack">
         <div>
-          <div className="coach-avatar lg">IC</div>
-          <h1 style={{ marginTop: "0.75rem" }}>{kind === "signup" ? "Meet your IELTS coach" : "Welcome back"}</h1>
+          <YuvrajAvatar size={72} />
+          <div className="eyebrow" style={{ marginTop: "1rem" }}>
+            IELTS General Training · CLB 9
+          </div>
+          <h1 className="auth-title">{kind === "signup" ? `Meet ${COACH_NAME}, your coach.` : "Welcome back."}</h1>
           <p className="muted">
             {kind === "signup"
-              ? "Create an account so your progress is saved automatically and follows you to any device."
-              : "Sign in to continue where you left off."}
+              ? "Real exam practice in all four modules, a plan to exam day, and a coach who keeps you honest. Your progress saves automatically on every device."
+              : "Sign in and pick up exactly where you left off."}
           </p>
         </div>
         <form className="stack" onSubmit={submit}>

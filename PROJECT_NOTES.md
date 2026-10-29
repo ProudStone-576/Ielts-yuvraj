@@ -113,8 +113,17 @@ The owner is not a developer. They want things explained simply, step by step, a
    utterance so its `end` event never fires (now kept referenced + a watchdog per sentence); the phone screen
    locking during reading time stops speech (now a Screen Wake Lock during the test); iPhones need speech to start
    from a tap (`unlockSpeech()` on Start). Tested with a fake speech engine that drops sentence endings.
-3. Owner feels the app is "missing some vibe" — it looks like a generic dashboard and the browser voices sound
-   robotic. Redesign direction to be agreed.
+3. Owner felt the app was "missing some vibe" (generic dashboard look, robotic browser voices). The friend wants
+   **premium / serious**, like Instagram, YouTube or Netflix, and a coach with personality named **Yuvraj**.
+4. **v3 redesign:** always-dark premium theme (near-black + gold accent, Inter + Fraunces fonts via `next/font`),
+   Netflix-style home (cinematic hero with Yuvraj's headline and a big Play button, stat strip with "Yuvraj's rule
+   of the day", scorecard, a shelf of poster tiles per module), poster grids on library pages, new sign-in screen.
+   Yuvraj = gold "Y" monogram (`components/Yuvraj.tsx`); his voice is in `lib/coach.ts` (`coachHeadline`,
+   `coachMessage`, `ruleOfTheDay`, `testFeedback`). **Exam screens deliberately stay light/plain** like the real
+   computer-delivered test (light tokens are re-declared on `.exam` in `globals.css`). The mock Speaking examiner
+   is not Yuvraj (a real examiner is a stranger).
+5. Still to do: natural recorded voices for Listening (pre-generated audio files instead of browser TTS), connect
+   Vercel to GitHub, confirm cloud save on the live site.
 
 ## 6. Repositories — important
 

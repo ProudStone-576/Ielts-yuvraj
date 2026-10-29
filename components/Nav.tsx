@@ -6,7 +6,7 @@ import { useState } from "react";
 import { signOut, useAuth } from "@/lib/storage";
 
 const LINKS = [
-  { href: "/", label: "Coach" },
+  { href: "/", label: "Home" },
   { href: "/plan", label: "Study plan" },
   { href: "/listening", label: "Listening" },
   { href: "/reading", label: "Reading" },
@@ -34,7 +34,7 @@ export function Nav() {
     <header className="topbar">
       <div className="topbar-inner">
         <Link href="/" className="brand">
-          IELTS <span>Coach</span>
+          IELTS<span>COACH</span>
         </Link>
         <nav className="nav">
           {LINKS.map((l) => {

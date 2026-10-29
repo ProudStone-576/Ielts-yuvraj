@@ -104,31 +104,61 @@ export function greeting(name: string): string {
   return name ? `${part}, ${name}` : part;
 }
 
+/** Yuvraj's headline for the home screen: short, direct, one idea. */
+export function coachHeadline(store: Store): string {
+  const tried = MODULES.filter((m) => store.attempts.some((a) => a.module === m));
+  const g = gaps(store);
+  if (tried.length === 0) return "Let's see where you really stand.";
+  if (tried.length < 4) return "Good. Now the full picture.";
+  if (MODULES.every((m) => g[m] <= 0)) return "CLB 9 level. Now we hold it.";
+  const worst = [...MODULES].sort((a, b) => g[b] - g[a])[0];
+  return `Today belongs to ${MODULE_LABEL[worst]}.`;
+}
+
 export function coachMessage(store: Store): string {
   const g = gaps(store);
   const tried = MODULES.filter((m) => store.attempts.some((a) => a.module === m));
   const days = daysUntil(store.examDate);
   if (tried.length === 0) {
-    return "Let's find out where you are. Start with one full Listening test today — it has the highest bar for CLB 9 (band 8.0), so it's the most important one to measure first.";
+    return "I'm Yuvraj, your coach until exam day. No guessing, no shortcuts: we measure first. Start with a full Listening test. It has the highest bar for CLB 9 (band 8.0), so it tells me the most.";
   }
   if (tried.length < 4) {
     const next = MODULES.find((m) => !tried.includes(m))!;
-    return `Good start. Before we plan properly, I need a baseline in every module — let's do a ${MODULE_LABEL[next]} test next.`;
+    return `You've made a start. Before I build your plan I need one honest score in every module, so ${MODULE_LABEL[next]} is next.`;
   }
   const atTarget = MODULES.filter((m) => g[m] <= 0);
   const worst = [...MODULES].sort((a, b) => g[b] - g[a])[0];
   if (atTarget.length === 4) {
-    return "You're at CLB 9 level in all four modules on your recent tests. Now it's about consistency — keep doing full mock tests under exam conditions so this level holds on the day.";
+    return "Your recent scores are at CLB 9 in all four modules. Proud of you. From here it's consistency: full mocks under real conditions, so this level holds on the day.";
   }
-  const timing = days !== null && days > 0 ? ` With ${days} day${days === 1 ? "" : "s"} to go, ` : " ";
-  return `You're at target in ${atTarget.length} of 4 modules.${timing}${MODULE_LABEL[worst]} needs the most work — it's ${formatBand(g[worst])} band${g[worst] === 1 ? "" : "s"} below your target, so it gets the biggest share of today's plan.`;
+  const timing = days !== null && days > 0 ? ` ${days} day${days === 1 ? "" : "s"} to go.` : "";
+  return `You're at target in ${atTarget.length} of 4 modules.${timing} ${MODULE_LABEL[worst]} is ${formatBand(g[worst])} band${g[worst] === 1 ? "" : "s"} short, so that's where today's work goes. Small gaps close fast when we work on the right thing.`;
+}
+
+/** One of Yuvraj's rules, a different one each day. */
+const RULES = [
+  "Read the instructions twice. 'NO MORE THAN TWO WORDS' has cost more people band 8 than any hard question.",
+  "In Listening, the speaker often corrects themselves. The last answer you hear is the one that counts.",
+  "Never leave a gap. There's no penalty for a wrong answer, but a blank is always zero.",
+  "In Writing Task 2, say what you think in the introduction, and still think it in the conclusion.",
+  "In Speaking, don't stop at 'yes'. Answer, give a reason, add an example.",
+  "Spelling counts. 'Accomodation' is wrong, and so is 'accommodations' when the answer is singular.",
+  "Not Given means the text doesn't say it. If you're hunting hard for it and can't find it, trust that.",
+  "Plan your essay for five minutes. Everyone who skips this runs out of time.",
+  "Fluency beats fancy words. A smooth answer with simple vocabulary scores higher than a broken one with rare words.",
+  "Review every wrong answer until you can point to the exact sentence that proves the right one.",
+];
+
+export function ruleOfTheDay(): string {
+  const day = Math.floor(Date.now() / 86_400_000);
+  return RULES[day % RULES.length];
 }
 
 /** Feedback shown after finishing a test. */
 export function testFeedback(module: Module, band: number, target: number, breakdown?: Record<string, SkillScore>): string[] {
   const out: string[] = [];
   const diff = band - target;
-  if (diff >= 0.5) out.push(`Excellent — band ${formatBand(band)} is above your target of ${formatBand(target)}. Keep this up under timed conditions.`);
+  if (diff >= 0.5) out.push(`Band ${formatBand(band)}, above your target of ${formatBand(target)}. That's the standard. Now do it again, so it's not luck.`);
   else if (diff === 0) out.push(`Band ${formatBand(band)} — exactly on target. Now we make it reliable so a harder paper doesn't push you below.`);
   else if (diff >= -1) out.push(`Band ${formatBand(band)} — close. You're ${formatBand(-diff)} below your target of ${formatBand(target)}, which is usually just 2–4 more correct answers.`);
   else out.push(`Band ${formatBand(band)} — your target is ${formatBand(target)}. Don't worry: we'll work on the question types that cost you the most marks first.`);

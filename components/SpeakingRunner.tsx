@@ -11,6 +11,7 @@ import { speak } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { SpeakingSet } from "@/lib/types";
 import { formatClock, useCountdown } from "@/lib/useTimer";
+import { YuvrajSays } from "@/components/Yuvraj";
 
 /*
  * A mock interview that follows the real examiner script: introduction and ID
@@ -316,16 +317,12 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
     <ExamFrame module="Speaking — Review your interview" candidate={store.name}>
       <div className="exam-scroll">
         <div className="results stack">
-          <div className="card coach-note">
-            <div className="coach-avatar">IC</div>
-            <div>
-              <b>Listen back like an examiner.</b>
-              <p style={{ margin: "0.4rem 0 0" }}>
-                Play each part, read the transcript and notice where you hesitated or ran out of ideas. Then score
-                yourself below. Longer answers with fewer fillers are the fastest way to raise your fluency score.
-              </p>
-            </div>
-          </div>
+          <YuvrajSays title="listen back like an examiner">
+            <p style={{ margin: 0 }}>
+              Play each part, read the transcript and notice where you hesitated or ran out of ideas. Then score
+              yourself below. Longer answers with fewer fillers are the fastest way to raise your fluency score.
+            </p>
+          </YuvrajSays>
           {[1, 2, 3].map((p) => {
             const r = results[p];
             const words = r ? countWords(r.transcript) : 0;

@@ -10,6 +10,7 @@ import { countWords, formatBand, writingBand } from "@/lib/scoring";
 import { useStore } from "@/lib/storage";
 import type { WritingTask, WritingTest } from "@/lib/types";
 import { useCountdown } from "@/lib/useTimer";
+import { YuvrajSays } from "@/components/Yuvraj";
 
 type Phase = "intro" | "test" | "assess" | "results";
 
@@ -98,16 +99,12 @@ export function WritingRunner({ test, tasks }: { test: WritingTest; tasks: [Writ
       <ExamFrame module="Writing — Check your work" candidate={store.name}>
         <div className="exam-scroll">
           <div className="results stack">
-            <div className="card coach-note">
-              <div className="coach-avatar">IC</div>
-              <div>
-                <b>Time to mark your work like an examiner.</b>
-                <p style={{ margin: "0.4rem 0 0" }}>
-                  For each task, compare your answer with the model, read the automatic checks, then click the
-                  description that matches your writing in each row. Be strict — that&apos;s how you improve.
-                </p>
-              </div>
-            </div>
+            <YuvrajSays title="mark it like an examiner">
+              <p style={{ margin: 0 }}>
+                For each task, compare your answer with the model, read the automatic checks, then click the
+                description that matches your writing in each row. Be strict with yourself — examiners will be.
+              </p>
+            </YuvrajSays>
             {tasks.map((t, i) => {
               const checks = checksFor(t.task, t.kind, texts[i], t.minWords);
               return (

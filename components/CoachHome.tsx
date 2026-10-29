@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { PosterCard } from "@/components/TestList";
+import { COACH_NAME, YuvrajAvatar } from "@/components/Yuvraj";
 import {
+  coachHeadline,
   coachMessage,
   daysUntil,
   gaps,
   greeting,
   recentAverage,
+  ruleOfTheDay,
   SKILL_TIPS,
   streak,
   todaysPlan,
@@ -37,110 +41,99 @@ export function CoachHome({ catalog }: { catalog: Record<Module, CatalogItem[]> 
   const atTarget = MODULES.filter((m) => g[m] <= 0).length;
   const run = streak(store.attempts);
   const recent = [...store.attempts].reverse().slice(0, 5);
+  const first = plan[0];
+  const firstTest = first && nextTest(store, first.module, catalog[first.module]);
 
   return (
-    <div className="stack">
-      <div className="card coach-hero">
-        <div className="coach-avatar lg">IC</div>
-        <div className="stack" style={{ gap: "0.4rem" }}>
-          <h1 style={{ margin: 0 }}>{greeting(store.name)} 👋</h1>
-          <p style={{ margin: 0 }}>{coachMessage(store)}</p>
+    <div className="home">
+      <section className={`hero ${first ? `tint-${first.module}` : ""}`}>
+        <div className="hero-copy">
+          <div className="hero-coach">
+            <YuvrajAvatar size={56} />
+            <div>
+              <div className="eyebrow">Your coach</div>
+              <div className="hero-coach-name">{COACH_NAME}</div>
+            </div>
+          </div>
+          <div className="eyebrow muted">{greeting(store.name)}</div>
+          <h1 className="hero-title">{coachHeadline(store)}</h1>
+          <p className="hero-quote">“{coachMessage(store)}”</p>
+          <div className="row">
+            {first && firstTest ? (
+              <Link className="btn primary lg" href={`/${first.module}/${firstTest.id}`}>
+                ▶&nbsp; Start {firstTest.title}
+              </Link>
+            ) : (
+              <Link className="btn primary lg" href="/listening">
+                ▶&nbsp; Take another test
+              </Link>
+            )}
+            <Link className="btn ghost lg" href="/plan">
+              View study plan
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-3">
-        <div className="card stat">
-          <div className="muted small">Exam day</div>
+      <section className="stat-strip">
+        <div className="stat-item">
+          <div className="eyebrow muted">Exam day</div>
           {days === null ? (
-            <label className="stack" style={{ gap: "0.3rem" }}>
-              <span className="small">When is the exam?</span>
-              <input type="date" onChange={(e) => update((s) => ({ ...s, examDate: e.target.value }))} />
-            </label>
+            <input type="date" aria-label="Exam date" onChange={(e) => update((s) => ({ ...s, examDate: e.target.value }))} />
           ) : (
             <>
-              <div className="band-big">{days > 0 ? days : days === 0 ? "Today" : "—"}</div>
+              <div className="stat-num">{days > 0 ? days : days === 0 ? "Today" : "—"}</div>
               <div className="small muted">
-                {days > 0 ? `days to go · ${new Date(store.examDate + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "long" })}` : days === 0 ? "Good luck! You're ready." : "Exam date passed — update it in Study plan"}
+                {days > 0
+                  ? `days to go · ${new Date(store.examDate + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "long" })}`
+                  : days === 0
+                    ? "You're ready. Go and show them."
+                    : "Date passed — update it in Study plan"}
               </div>
             </>
           )}
         </div>
-        <div className="card stat">
-          <div className="muted small">CLB 9 progress</div>
-          <div className="band-big">
+        <div className="stat-item">
+          <div className="eyebrow muted">At CLB 9</div>
+          <div className="stat-num">
             {atTarget}
-            <span className="muted" style={{ fontSize: "1.1rem" }}> / 4 modules</span>
+            <span className="stat-of"> / 4</span>
           </div>
-          <div className="progress good" style={{ marginTop: "0.4rem" }}>
-            <div style={{ width: `${(atTarget / 4) * 100}%` }} />
-          </div>
+          <div className="small muted">modules at target</div>
         </div>
-        <div className="card stat">
-          <div className="muted small">Practice streak</div>
-          <div className="band-big">
+        <div className="stat-item">
+          <div className="eyebrow muted">Streak</div>
+          <div className="stat-num">
             {run}
-            <span className="muted" style={{ fontSize: "1.1rem" }}> day{run === 1 ? "" : "s"}</span>
+            <span className="stat-of"> day{run === 1 ? "" : "s"}</span>
           </div>
-          <div className="small muted">{run ? "Keep it going — a test a day adds up." : "Finish a test today to start a streak."}</div>
+          <div className="small muted">{run ? "Don't break the chain." : "One test today starts it."}</div>
         </div>
-      </div>
-
-      <section>
-        <h2>Today&apos;s plan</h2>
-        {plan.length === 0 ? (
-          <div className="card">✅ You&apos;ve done today&apos;s work. Rest, or take another test if you feel fresh.</div>
-        ) : (
-          <div className="grid grid-2">
-            {plan.map((t) => {
-              const next = nextTest(store, t.module, catalog[t.module]);
-              return (
-                <div key={t.module} className="card stack task-card">
-                  <div className="row">
-                    <span className={`mod-dot ${t.module}`} />
-                    <b>{t.title}</b>
-                    <div className="spacer" />
-                    <span className="badge">{t.minutes} min</span>
-                  </div>
-                  <p className="small muted" style={{ margin: 0 }}>
-                    {t.detail}
-                  </p>
-                  {next && (
-                    <div>
-                      <Link className="btn primary" href={`/${t.module}/${next.id}`}>
-                        Start {next.title}
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className="stat-item rule">
+          <div className="eyebrow">{COACH_NAME}&apos;s rule of the day</div>
+          <p>{ruleOfTheDay()}</p>
+        </div>
       </section>
 
       <section>
-        <h2>Where you are</h2>
-        <div className="grid grid-4">
+        <h2 className="shelf-title">Your scorecard</h2>
+        <div className="scorecard">
           {MODULES.map((m) => {
             const avg = recentAverage(store.attempts, m);
             const target = store.target[m];
             const pct = avg === undefined ? 0 : Math.min(100, (avg / target) * 100);
+            const met = avg !== undefined && avg >= target;
             return (
-              <Link key={m} href={`/${m}`} className="card">
-                <div className="row">
-                  <span className={`mod-dot ${m}`} />
-                  <h3 style={{ margin: 0 }}>{MODULE_LABEL[m]}</h3>
+              <Link key={m} href={`/${m}`} className={`score-tile tint-${m}`}>
+                <div className="eyebrow">{MODULE_LABEL[m]}</div>
+                <div className="score-row">
+                  <span className="score-num">{avg !== undefined ? formatBand(avg) : "—"}</span>
+                  <span className="muted small">target {formatBand(target)}</span>
                 </div>
-                <div className="row" style={{ margin: "0.6rem 0 0.4rem", alignItems: "baseline" }}>
-                  <span className="band-big" style={{ fontSize: "1.8rem" }}>
-                    {avg !== undefined ? formatBand(avg) : "—"}
-                  </span>
-                  <span className="muted small">/ target {formatBand(target)}</span>
-                </div>
-                <div className={`progress ${avg !== undefined && avg >= target ? "good" : ""}`}>
+                <div className={`progress ${met ? "good" : ""}`}>
                   <div style={{ width: `${pct}%` }} />
                 </div>
-                <div className="small muted" style={{ marginTop: "0.4rem" }}>
+                <div className="small muted">
                   {avg === undefined ? "Not tested yet" : `CLB ${bandToClb(m, avg) || "<4"} · ${countLabel(store.attempts.filter((a) => a.module === m).length)}`}
                 </div>
               </Link>
@@ -149,12 +142,35 @@ export function CoachHome({ catalog }: { catalog: Record<Module, CatalogItem[]> 
         </div>
       </section>
 
+      {plan.length === 0 && (
+        <section className="card done-today">
+          <b>Today&apos;s work is done.</b> Rest properly — or take one more test if you still feel sharp.
+        </section>
+      )}
+
+      {MODULES.map((m) => (
+        <section key={m}>
+          <div className="shelf-head">
+            <h2 className="shelf-title">{MODULE_LABEL[m]}</h2>
+            <Link href={`/${m}`} className="small">
+              See all →
+            </Link>
+          </div>
+          <div className="shelf">
+            {catalog[m].map((t, i) => (
+              <PosterCard key={t.id} module={m} index={i} {...t} />
+            ))}
+          </div>
+        </section>
+      ))}
+
       <div className="grid grid-2">
         <section className="card">
-          <h3>Your weak spots</h3>
+          <h3>Where you&apos;re losing marks</h3>
           {weak.length === 0 ? (
             <p className="muted small" style={{ margin: 0 }}>
-              After a few Listening and Reading tests I&apos;ll show the question types costing you the most marks here.
+              After a few Listening and Reading tests I&apos;ll show you exactly which question types are costing you, and
+              how to fix them.
             </p>
           ) : (
             <div className="stack">
@@ -178,7 +194,7 @@ export function CoachHome({ catalog }: { catalog: Record<Module, CatalogItem[]> 
           <h3>Recent tests</h3>
           {recent.length === 0 ? (
             <p className="muted small" style={{ margin: 0 }}>
-              Nothing yet — your first test result will appear here.
+              Nothing yet. Your first result will appear here.
             </p>
           ) : (
             <table className="data">
