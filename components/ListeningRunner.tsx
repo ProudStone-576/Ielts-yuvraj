@@ -7,6 +7,9 @@ import { useExamState } from "@/components/exam/useExamState";
 import { QuestionGroups } from "@/components/Questions";
 import { scoreBlocks } from "@/lib/exam";
 import { rawToBand } from "@/lib/scoring";
+import { LISTENING_AUDIO } from "@/content/listening-audio";
+import { playClip, setAudioVolume, unlockAudio } from "@/lib/audio";
+import { CHECK_TIME, NARRATION } from "@/lib/narration";
 import { getVolume, keepScreenOn, playScript, setVolume, speak, speechSupported, unlockSpeech, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { ListeningTest } from "@/lib/types";
@@ -23,7 +26,6 @@ type Stage =
 
 /** Exam timings in seconds, like the computer-delivered test. */
 const READING_TIME = 30;
-const CHECK_TIME = 30;
 const FINAL_CHECK = 120;
 
 /** Testing hook: localStorage "ielts-dev-fast" = "1" shortens all waits. */
@@ -49,6 +51,9 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
   const [reviewPlaying, setReviewPlaying] = useState(false);
   const run = useRef(0);
   const playback = useRef<Playback | null>(null);
+  /** Recorded audio for this test (start time of every script line, per part), if it has been generated. */
+  const recorded = LISTENING_AUDIO[test.id];
+  const clipUrl = (id: string) => `/audio/listening/${test.id}/${id}.mp3`;
   const answersRef = useRef(exam.answers);
   answersRef.current = exam.answers;
 
@@ -95,41 +100,62 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
     setPhase("results");
   };
 
+  /** Plays a recorded clip, or reads `text` with the browser voice if there is no recording (or it fails). */
+  const narrate = async (clip: string, text: string) => {
+    if (recorded) {
+      const pb = playClip(clipUrl(clip));
+      playback.current = pb;
+      const ok = await pb.ok;
+      playback.current = null;
+      if (ok) return;
+    }
+    await speak(text);
+  };
+
   /** Runs the whole test automatically, part by part. */
   const start = async () => {
     unlockSpeech();
+    if (recorded) unlockAudio();
     setPhase("test");
     const id = ++run.current;
     const alive = () => run.current === id;
     const k = scale();
     const wait = (s: number) => new Promise((r) => setTimeout(r, s * 1000 * k));
 
-    await speak("You will hear a number of different recordings, and you will have to answer questions on what you hear. You will hear each recording once only. Now turn to Part 1.");
+    await narrate("intro", NARRATION.intro);
     for (let i = 0; i < test.parts.length; i++) {
       if (!alive()) return;
       const p = test.parts[i];
       const nums = exam.numbered.parts[i].numbers;
       exam.openPart(i);
       setStage({ kind: "announce", part: i });
-      await speak(`Part ${i + 1}. ${p.context} First, you have some time to look at questions ${nums[0]} to ${nums.at(-1)}.`);
+      await narrate(`p${i + 1}-announce`, NARRATION.announce(i + 1, p.context, nums[0], nums.at(-1)!));
       if (!alive()) return;
       setStage({ kind: "reading", part: i, until: Date.now() + READING_TIME * 1000 * k });
       await wait(READING_TIME);
       if (!alive()) return;
       setStage({ kind: "playing", part: i });
-      await speak(`Now listen carefully and answer questions ${nums[0]} to ${nums.at(-1)}.`);
+      await narrate(`p${i + 1}-listen`, NARRATION.listen(nums[0], nums.at(-1)!));
       if (!alive()) return;
-      playback.current = playScript(p.script, p.voices, 1, () => {});
-      await playback.current.done;
+      let played = false;
+      if (recorded) {
+        const pb = playClip(clipUrl(`p${i + 1}-script`));
+        playback.current = pb;
+        played = await pb.ok;
+      }
+      if (!played && alive()) {
+        playback.current = playScript(p.script, p.voices, 1, () => {});
+        await playback.current.done;
+      }
       playback.current = null;
       if (!alive()) return;
-      await speak(`That is the end of Part ${i + 1}. You now have ${CHECK_TIME} seconds to check your answers.`);
+      await narrate(`p${i + 1}-end`, NARRATION.end(i + 1));
       if (!alive()) return;
       setStage({ kind: "check", part: i, until: Date.now() + CHECK_TIME * 1000 * k });
       await wait(CHECK_TIME);
     }
     if (!alive()) return;
-    await speak("That is the end of the listening test. You now have two minutes to check your answers.");
+    await narrate("final", NARRATION.final);
     if (!alive()) return;
     setStage({ kind: "final", until: Date.now() + FINAL_CHECK * 1000 * k });
     await wait(FINAL_CHECK);
@@ -162,6 +188,7 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
         onChange={(e) => {
           setVol(Number(e.target.value));
           setVolume(Number(e.target.value));
+          setAudioVolume(Number(e.target.value));
         }}
       />
     </label>
@@ -185,7 +212,10 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
           <h4>Sound check</h4>
           <p className="small">Put on your headphones, press Play and adjust the volume at the top right until you can hear clearly.</p>
           <div className="row">
-            <button className="btn" onClick={() => speak("This is a sound check. You should hear this sentence clearly. Adjust the volume if necessary.")}>
+            <button className="btn" onClick={() => {
+                if (recorded) unlockAudio();
+                narrate("soundcheck", NARRATION.soundCheck);
+              }}>
               ▶ Play sound check
             </button>
           </div>
@@ -240,6 +270,23 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
   const playFrom = (from: number) => {
     playback.current?.stop();
     setReviewPlaying(true);
+    const starts = recorded?.[exam.part];
+    if (starts) {
+      const pb = playClip(clipUrl(`p${exam.part + 1}-script`), starts[from], (t) => {
+        let i = from;
+        while (i + 1 < starts.length && starts[i + 1] <= t) i++;
+        setReviewLine(i);
+      });
+      playback.current = pb;
+      pb.done.then(() => {
+        if (playback.current === pb) {
+          playback.current = null;
+          setReviewPlaying(false);
+          setReviewLine(-1);
+        }
+      });
+      return;
+    }
     const pb = playScript(part.script.slice(from), part.voices, 1, (i) => setReviewLine(i < 0 ? -1 : i + from));
     playback.current = pb;
     pb.done.then(() => {
