@@ -45,7 +45,7 @@ The owner is not a developer. They want things explained simply, step by step, a
   The owner was asked to: sign up → take a test → sign in on another device → check Progress.
   If it fails, read the Vercel runtime logs for `/api/auth/signup` and `/api/progress`.
 - **Code lives in:** the zip `ielts-coach.zip` the owner downloaded (includes full git history), and the latest
-  deployment on Vercel. **It is NOT on GitHub yet** (see next steps).
+  deployment on Vercel. Now on GitHub: `ProudStone-576/Ielts-coach` (branch `main`).
 - **Old Vercel tokens** were pasted in chat and the owner was told to delete them. Always ask for a fresh,
   short-expiry token for each deploy session; never store tokens in the repo.
 
@@ -122,8 +122,23 @@ The owner is not a developer. They want things explained simply, step by step, a
    `coachMessage`, `ruleOfTheDay`, `testFeedback`). **Exam screens deliberately stay light/plain** like the real
    computer-delivered test (light tokens are re-declared on `.exam` in `globals.css`). The mock Speaking examiner
    is not Yuvraj (a real examiner is a stranger).
-5. Still to do: natural recorded voices for Listening (pre-generated audio files instead of browser TTS), connect
-   Vercel to GitHub, confirm cloud save on the live site.
+5. **Natural Listening voices:** recordings are generated once with the open-source **Kokoro** model (Apache 2.0)
+   and stored in `public/audio/listening/<test>/<clip>.mp3` (narrator clips + one `pN-script.mp3` per part).
+   `content/listening-audio.ts` (generated) lists the tests that have audio and when every script line starts (used
+   to highlight the transcript in review). `ListeningRunner` plays the clips through `lib/audio.ts` and falls back
+   to browser speech if a clip is missing or fails. Narrator wording lives in `lib/narration.ts` (shared).
+   **After adding or editing a Listening test, regenerate:**
+   `npx -y tsx@4.19.2 --tsconfig tsconfig.json scripts/export-listening.ts > /tmp/listening.json` then
+   `python3 scripts/make-audio.py /tmp/listening.json` (needs `pip install kokoro-onnx soundfile`, ffmpeg, and
+   `huggingface.co`, `cdn-lfs.huggingface.co`, `cas-bridge.xethub.hf.co` in Allowed domains). Existing clips are
+   skipped; pass `--force` to redo all. Speaker casting (who gets which voice) is in `make-audio.py` (`SEX`,
+   `FEMALE`, `MALE`). Kokoro has no Australian accent. Checked by transcribing the clips with faster-whisper.
+6. **Environments:** the account has three cloud environments ("Sim" and two "Default"). This session ran in
+   "Default"; domains added to the wrong one have no effect. Default now allows Hugging Face and Vercel.
+7. **Vercel ↔ GitHub:** `main` exists and is the branch to deploy, but Vercel had not built any push as of this
+   session (no deployment statuses on GitHub). The live project is in the Vercel account/team **urbanthug**; a
+   GitHub connection in a different Vercel account (e.g. Taran's) doesn't reach it. Connect the repo in the
+   urbanthug project's Settings → Git, Production Branch `main`.
 
 ## 6. Repositories — important
 
