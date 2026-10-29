@@ -46,6 +46,18 @@ function chunks(text: string): string[] {
   return parts.length ? parts : [text];
 }
 
+/**
+ * Utterances being spoken. Chrome can garbage-collect an utterance that nothing refers to,
+ * and then its `end` event never fires — which froze the Listening test mid-way.
+ */
+const live = new Set<SpeechSynthesisUtterance>();
+
+/** Rough speaking time, used as a safety limit in case the browser never reports the end. */
+function estimateMs(text: string, rate: number): number {
+  const words = text.split(/\s+/).length;
+  return (words / (2.6 * rate)) * 1000 * 2 + 4000;
+}
+
 function say(text: string, voice: SpeechSynthesisVoice | undefined, style: VoiceStyle, speed: number): Promise<void> {
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
@@ -54,10 +66,56 @@ function say(text: string, voice: SpeechSynthesisVoice | undefined, style: Voice
     u.pitch = style.pitch;
     u.rate = (style.rate ?? 1) * speed;
     u.volume = volume;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
+    live.add(u);
+    // Some browsers pause speech on their own (e.g. after the screen dims); nudge them on.
+    const nudge = setInterval(() => {
+      if (speechSynthesis.paused) speechSynthesis.resume();
+    }, 1000);
+    const watchdog = setTimeout(() => {
+      speechSynthesis.cancel();
+      finish();
+    }, estimateMs(text, u.rate));
+    function finish() {
+      clearInterval(nudge);
+      clearTimeout(watchdog);
+      live.delete(u);
+      resolve();
+    }
+    u.onend = finish;
+    u.onerror = finish;
     speechSynthesis.speak(u);
   });
+}
+
+/**
+ * Call straight from a button click: iPhones and iPads only allow speech that starts from a tap,
+ * so this unlocks it for the rest of the test.
+ */
+export function unlockSpeech() {
+  if (!speechSupported()) return;
+  const u = new SpeechSynthesisUtterance(" ");
+  u.volume = 0;
+  speechSynthesis.speak(u);
+}
+
+/** Keeps the phone screen on while a test is running; a locked screen stops the audio. */
+export function keepScreenOn(): () => void {
+  type WakeLock = { release: () => Promise<void> };
+  const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<WakeLock> } };
+  if (!nav.wakeLock) return () => {};
+  let lock: WakeLock | null = null;
+  let active = true;
+  const acquire = () => {
+    if (active && document.visibilityState === "visible")
+      nav.wakeLock!.request("screen").then((l) => (lock = l), () => {});
+  };
+  acquire();
+  document.addEventListener("visibilitychange", acquire);
+  return () => {
+    active = false;
+    document.removeEventListener("visibilitychange", acquire);
+    lock?.release().catch(() => {});
+  };
 }
 
 export interface Playback {

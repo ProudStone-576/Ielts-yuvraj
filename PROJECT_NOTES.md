@@ -105,6 +105,17 @@ The owner is not a developer. They want things explained simply, step by step, a
    Owner connected Neon and gave a new token → **deployed** (build OK, 39 pages + 5 API routes).
 9. Owner asked for this notes file so a future session can continue without re-explaining.
 
+### Session 2 (29 Oct 2026, later)
+
+1. Code is now on GitHub: `ProudStone-576/Ielts-coach` (pushed from the zip with full history, branch
+   `ccr-ca1693ab-rwn0ez`; `main` still to be created and connected to Vercel).
+2. Friend reported **Listening stopped part-way**. Causes fixed in `lib/speech.ts`: Chrome can garbage-collect an
+   utterance so its `end` event never fires (now kept referenced + a watchdog per sentence); the phone screen
+   locking during reading time stops speech (now a Screen Wake Lock during the test); iPhones need speech to start
+   from a tap (`unlockSpeech()` on Start). Tested with a fake speech engine that drops sentence endings.
+3. Owner feels the app is "missing some vibe" — it looks like a generic dashboard and the browser voices sound
+   robotic. Redesign direction to be agreed.
+
 ## 6. Repositories — important
 
 - **`proudstone-576/c9orf72-als-proteostasis-study`** is the **friend's ALS research repo**. The cloud session

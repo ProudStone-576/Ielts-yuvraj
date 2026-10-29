@@ -7,7 +7,7 @@ import { useExamState } from "@/components/exam/useExamState";
 import { QuestionGroups } from "@/components/Questions";
 import { scoreBlocks } from "@/lib/exam";
 import { rawToBand } from "@/lib/scoring";
-import { getVolume, playScript, setVolume, speak, speechSupported, type Playback } from "@/lib/speech";
+import { getVolume, keepScreenOn, playScript, setVolume, speak, speechSupported, unlockSpeech, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { ListeningTest } from "@/lib/types";
 import { formatClock } from "@/lib/useTimer";
@@ -70,7 +70,11 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
   useEffect(() => {
     if (phase !== "test") return;
     const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
+    const release = keepScreenOn();
+    return () => {
+      clearInterval(t);
+      release();
+    };
   }, [phase]);
 
   const submit = () => {
@@ -93,6 +97,7 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
 
   /** Runs the whole test automatically, part by part. */
   const start = async () => {
+    unlockSpeech();
     setPhase("test");
     const id = ++run.current;
     const alive = () => run.current === id;
