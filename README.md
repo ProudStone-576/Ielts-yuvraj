@@ -17,8 +17,9 @@ A practice app for **IELTS General Training**, built to help reach **CLB 9**
 
 ## Cloud save setup (Vercel)
 
-In the Vercel dashboard: project → **Storage** → **Create Database** → **Upstash for Redis** (free) → connect it to
-this project. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`, which the app detects automatically. Redeploy.
+In the Vercel dashboard: project → **Storage** → **Create Database** → **Upstash for Redis** or **Neon** (both have
+free plans) → connect it to this project. The app detects either one automatically (`KV_REST_API_URL`/`KV_REST_API_TOKEN`
+for Upstash, `DATABASE_URL` for Neon) and creates its own table on Neon. Redeploy after connecting.
 Without a database the app still works, saving progress in the browser only.
 
 ## Run locally
