@@ -5,15 +5,21 @@ A practice app for **IELTS General Training**, built to help reach **CLB 9**
 
 ## What's inside
 
-| Module | What it does |
+| Area | What it does |
 |---|---|
-| **Listening** | Full 4-part, 40-question test read aloud with text-to-speech (a different voice per speaker). Exam mode plays each recording once; practice mode allows replay, pause and speed control. Transcripts after submitting. |
-| **Reading** | Full 3-section, 40-question General Training test with a 60-minute timer, or single sections in 20 minutes. Automatic marking and band conversion. |
-| **Writing** | 4 Task 1 letters and 4 Task 2 essays, each with a band 8–9 model answer. Timer, live word count, auto-saved drafts, automatic checks (paragraphs, linking words, repetition, tone), and self-assessment against the four official criteria. |
-| **Speaking** | 3 full mock interviews. Questions are read aloud, Part 2 has the cue card with 1-minute prep and 2-minute talk timers, answers are recorded for playback, and (in Chrome/Edge/Safari) transcribed with words-per-minute and filler-word counts. |
-| **Dashboard & Progress** | Band and CLB for every attempt, last-3 average vs target per module, exam countdown, "focus next" advice, and backup/restore of all progress to a file. |
+| **Real-exam screens** | Modelled on the computer-delivered test: timer header, bottom question navigator with **Review** flags, passage on the left and questions on the right, text highlighting, auto-submit when time runs out. |
+| **Listening** (4 full tests) | Runs like the real thing: instructions, reading time before each part, recording played **once** (text-to-speech, different voice per speaker), check time after each part and a 2-minute final check. Transcripts and replay only after submitting. |
+| **Reading** (4 full tests) | 3 parts, 40 questions, 60 minutes, every GT question type (TFNG, YNNG, headings, matching information/features, note/sentence/summary completion, MCQ, short answer). |
+| **Writing** (8 full tests) | Task 1 letter + Task 2 essay in one 60-minute session with live word counts; afterwards automatic checks, band 8–9 model answers and self-assessment against the official criteria. |
+| **Speaking** (10 interviews) | Examiner-led: ID check, Part 1, Part 2 cue card (1 min prep, 2 min talk), Part 3; timed answers, recording, transcript, words-per-minute and filler count. |
+| **Coach** | Daily plan, week-by-week study plan to exam day, streak, weak question types with targeted advice, and feedback after every test. CLB 9 targets built in. |
+| **Cloud save** | Accounts (email + password). Progress saves automatically and syncs across devices; works offline and syncs later. |
 
-All progress is stored in the browser (no account, no server). Use **Progress → Download backup** to keep a copy.
+## Cloud save setup (Vercel)
+
+In the Vercel dashboard: project → **Storage** → **Create Database** → **Upstash for Redis** (free) → connect it to
+this project. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`, which the app detects automatically. Redeploy.
+Without a database the app still works, saving progress in the browser only.
 
 ## Run locally
 
@@ -40,10 +46,10 @@ vercel --prod
 
 All content lives in `content/` as plain TypeScript data:
 
-- `content/reading.ts` – reading tests (passages + questions)
-- `content/listening.ts` – listening scripts + questions
-- `content/writing.ts` – writing prompts + model answers
-- `content/speaking.ts` – speaking question sets
+- `content/reading.ts`, `content/reading-more.ts` – reading tests (passages + questions)
+- `content/listening.ts`, `content/listening-more.ts` – listening scripts + questions
+- `content/writing.ts`, `content/writing-more.ts` – writing prompts, model answers and test pairs
+- `content/speaking.ts` – speaking interview sets
 
 Add a new object to the array and it appears in the app automatically.
 

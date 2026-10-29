@@ -417,8 +417,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .passage-article .passage-text { line-height: 1.7; }
 
 @media (max-width: 860px) {
-  .exam-split { grid-template-columns: 1fr; overflow: auto; }
-  .exam-split .pane { overflow: visible; }
+  .exam-split, .exam-single { display: block; overflow: auto; }
+  .exam-split .pane, .exam-single .pane { overflow: visible; min-height: auto; }
   .passage-pane { border-right: 0; border-bottom: 1px solid var(--border); }
   .exam-head { flex-wrap: wrap; gap: 0.5rem; }
   .exam-time { margin: 0; }
