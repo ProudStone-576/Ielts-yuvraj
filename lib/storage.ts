@@ -164,17 +164,25 @@ export async function initAuth() {
   window.addEventListener("online", () => scheduleSync());
 }
 
-export async function signIn(kind: "login" | "signup", fields: { email: string; password: string; name?: string }) {
+/**
+ * Signs in, creates an account, or resets a forgotten password with a recovery code.
+ * Returns the account's new recovery code when the server issued one (sign-up and reset).
+ */
+export async function signIn(
+  kind: "login" | "signup" | "reset",
+  fields: { email: string; password: string; name?: string; code?: string },
+): Promise<string | undefined> {
   const res = await fetch(`/api/auth/${kind}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(fields),
   });
-  const data = (await res.json()) as { email?: string; name?: string; error?: string };
+  const data = (await res.json()) as { email?: string; name?: string; error?: string; recoveryCode?: string };
   if (!res.ok || !data.email) throw new Error(data.error ?? "Something went wrong. Please try again.");
   setAuth({ mode: "signed-in", email: data.email, name: data.name ?? "", sync: "saving" });
   if (kind === "signup" && fields.name && !read().name) write({ ...read(), name: fields.name, updatedAt: Date.now() }, { sync: false });
   await pullAndMerge(data.email);
+  return data.recoveryCode;
 }
 
 export async function signOut() {

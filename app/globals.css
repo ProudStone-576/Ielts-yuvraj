@@ -765,3 +765,13 @@ a.review-card:hover { text-decoration: none; border-color: var(--accent); }
 .mock-step .eyebrow { color: color-mix(in srgb, var(--tint) 55%, white); }
 .mock-step.next { border-color: var(--accent); }
 .mock-step.done { opacity: 0.95; }
+
+/* Recovery code */
+.recovery-code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.35rem; letter-spacing: 0.08em; text-align: center;
+  padding: 0.9rem; border-radius: 12px;
+  background: var(--accent-soft); color: var(--accent-strong); border: 1px dashed var(--accent);
+  user-select: all;
+}
+.overlay { position: fixed; inset: 0; z-index: 100; background: var(--bg); overflow: auto; }

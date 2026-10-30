@@ -205,6 +205,27 @@ The owner is not a developer. They want things explained simply, step by step, a
 5. Checks: answer keys valid (472 questions), all written answers in Listening 5-6 audible by transcription,
    browser run of Listening 5 (map, Choose TWO, 27 recordings), Reading 5-6, Writing 9 and Speaking examiner clips.
 
+### Session 6 (30-31 Oct 2026) — six new features, all free
+
+1. **Dictation drills** (`/drills`, `content/drills.ts`, `components/DrillRunner.tsx`): 8 sets × 10 recorded items
+   (names, codes, phone numbers, prices, dates/times, spellings, corrections, plurals). One replay allowed; answers
+   compared ignoring case/spaces/punctuation; best scores in `store.drills`. Audio via `make-audio.py --drills`.
+2. **Mistake notebook** (`/mistakes`, `lib/mistakes.ts`): each Listening/Reading attempt now stores `mistakes`
+   (question id + given answer). Retry each one; correct → `store.mastered`. Evidence = the transcript/passage
+   sentence containing the answer (or best word overlap; per option for Choose TWO). Home shows a reminder
+   (`lib/mistake-count.ts` counts without loading content).
+3. **Speaking fluency report** (`lib/speaking-feedback.ts`): Part 2 length, words per answer in Parts 1/3, speed,
+   fillers per 100 words; a one-line summary is saved in the attempt's `notes`.
+4. **Mock exam day** (`/mock`, `components/MockDay.tsx`): picks the next untaken test per module; papers open with
+   `?mock=1` and the results page shows "Continue the mock exam"; final overall band + modules at CLB 9.
+   The plan is kept in localStorage (`ielts-coach:mock`), one device per sitting.
+5. **Installable app**: `app/manifest.ts` (home-screen name "Yuvraj"), icons in `public/icons/`, `public/sw.js`
+   (cache-first for audio/maps/icons/_next/static, network-first pages with offline fallback; range requests and
+   /api are not touched).
+6. **Recovery codes** instead of email reset: shown once after sign-up (`RecoveryCode` in `AuthGate.tsx`), stored
+   hashed on the user record; `/api/auth/reset` (email + code + new password; code is single-use and replaced),
+   `/api/auth/recovery` (signed-in: new code; also in the account menu for older accounts).
+
 ## 6. Repositories — important
 
 - **`proudstone-576/c9orf72-als-proteostasis-study`** is the **friend's ALS research repo**. The cloud session

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { RecoveryCode } from "@/components/AuthGate";
 import { signOut, useAuth } from "@/lib/storage";
 
 const LINKS = [
@@ -29,9 +30,28 @@ export function Nav() {
   const path = usePathname();
   const auth = useAuth();
   const [menu, setMenu] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+
+  /** Recovery codes let you reset a forgotten password; accounts made before they existed can get one here. */
+  const newCode = async () => {
+    if (!confirm("Create a new recovery code? Any code you saved before will stop working.")) return;
+    const res = await fetch("/api/auth/recovery", { method: "POST" });
+    const data = (await res.json().catch(() => ({}))) as { recoveryCode?: string; error?: string };
+    if (data.recoveryCode) {
+      setMenu(false);
+      setCode(data.recoveryCode);
+    } else alert(data.error ?? "Couldn't create a code. Please try again.");
+  };
 
   // The exam screens use their own full-screen header, like the real test.
   if (path.split("/").length > 2 && /^\/(listening|reading|writing|speaking)\//.test(path)) return null;
+
+  if (code)
+    return (
+      <div className="overlay">
+        <RecoveryCode code={code} onDone={() => setCode(null)} />
+      </div>
+    );
 
   return (
     <header className="topbar">
@@ -62,6 +82,9 @@ export function Nav() {
                 <div className="small" style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
                   {auth.email}
                 </div>
+                <button className="btn" style={{ width: "100%", marginBottom: "0.4rem" }} onClick={newCode}>
+                  New recovery code
+                </button>
                 <button className="btn" style={{ width: "100%" }} onClick={() => signOut()}>
                   Sign out
                 </button>

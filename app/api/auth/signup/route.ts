@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createUser, normaliseEmail, startSession } from "@/lib/server/auth";
+import { createUser, newRecoveryCode, normaliseEmail, startSession } from "@/lib/server/auth";
 import { cloudEnabled } from "@/lib/server/db";
 
 export async function POST(req: Request) {
@@ -19,5 +19,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "An account with this email already exists. Try signing in." }, { status: 409 });
   }
   await startSession(email);
-  return NextResponse.json({ email, name });
+  return NextResponse.json({ email, name, recoveryCode: await newRecoveryCode(email) });
 }
