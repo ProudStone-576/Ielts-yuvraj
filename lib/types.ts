@@ -51,6 +51,12 @@ export interface ListeningPart {
   /** Speaker name -> voice style used by text-to-speech */
   voices: Record<string, { lang: string; pitch: number; rate?: number }>;
   script: ScriptLine[];
+  /**
+   * The real exam's mid-part break: "Before you hear the rest of the conversation, you have some time to look
+   * at questions 7 to 10." The recording stops before script line `beforeLine`; `fromQuestion` is the
+   * (0-based, within this part) index of the first question answered after the break.
+   */
+  pause?: { beforeLine: number; fromQuestion: number };
   groups: QuestionGroup[];
 }
 

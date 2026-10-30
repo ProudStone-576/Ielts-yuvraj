@@ -41,6 +41,21 @@ for (const t of LISTENING_TESTS) {
   for (const p of t.parts) {
     for (const l of p.script) if (!p.voices[l.speaker]) fail(`${t.id}: no voice for speaker "${l.speaker}"`);
     total += checkGroups(t.id, p.groups, p.script.map((l) => l.text).join(" "));
+    // With a mid-part break, each written answer must be spoken in the half its question belongs to.
+    if (p.pause) {
+      const { beforeLine, fromQuestion } = p.pause;
+      const qs = p.groups.flatMap((g) => g.questions);
+      if (beforeLine <= 0 || beforeLine >= p.script.length) fail(`${t.id} ${p.title}: pause line out of range`);
+      if (fromQuestion <= 0 || fromQuestion >= qs.length) fail(`${t.id} ${p.title}: pause question out of range`);
+      const half = (lines: typeof p.script) => lines.map((l) => l.text).join(" ");
+      const [first, second] = [half(p.script.slice(0, beforeLine)), half(p.script.slice(beforeLine))];
+      const heard = (src: string, a: string[]) => a.some((x) => norm(src).includes(norm(x)) || squash(src).includes(squash(x)));
+      qs.forEach((q, i) => {
+        if (q.type !== "text") return;
+        const [mine, other] = i < fromQuestion ? [first, "before"] : [second, "after"];
+        if (!heard(mine, q.answer)) fail(`${t.id}: answer for ${q.id} should be heard ${other} the break`);
+      });
+    }
   }
   if (total !== 40) fail(`${t.id}: ${total} questions (expected 40)`);
 }

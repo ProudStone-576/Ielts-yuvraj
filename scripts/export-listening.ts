@@ -3,11 +3,14 @@
  * Run: npx -y tsx@4.19.2 --tsconfig tsconfig.json scripts/export-listening.ts > /tmp/listening.json
  */
 import { LISTENING_TESTS } from "@/content/listening";
-import { narrationClips } from "@/lib/narration";
+import { narrationClips, scriptSegments, segmentClip } from "@/lib/narration";
 
 const out = LISTENING_TESTS.map((t) => ({
   id: t.id,
   narration: narrationClips(t),
-  parts: t.parts.map((p, i) => ({ id: `p${i + 1}-script`, voices: p.voices, script: p.script })),
+  parts: t.parts.map((p, i) => ({
+    voices: p.voices,
+    segments: scriptSegments(p).map((script, s) => ({ id: segmentClip(i + 1, s), script })),
+  })),
 }));
 console.log(JSON.stringify(out, null, 1));

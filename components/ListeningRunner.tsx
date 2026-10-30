@@ -9,7 +9,7 @@ import { scoreBlocks } from "@/lib/exam";
 import { rawToBand } from "@/lib/scoring";
 import { LISTENING_AUDIO } from "@/content/listening-audio";
 import { playClip, setAudioVolume, unlockAudio } from "@/lib/audio";
-import { CHECK_TIME, NARRATION } from "@/lib/narration";
+import { CHECK_TIME, NARRATION, partRanges, recordingKind, scriptSegments, segmentClip } from "@/lib/narration";
 import { getVolume, keepScreenOn, playScript, setVolume, speak, speechSupported, unlockSpeech, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { ListeningTest } from "@/lib/types";
@@ -126,28 +126,35 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
     for (let i = 0; i < test.parts.length; i++) {
       if (!alive()) return;
       const p = test.parts[i];
-      const nums = exam.numbered.parts[i].numbers;
+      const ranges = partRanges(exam.numbered.parts[i].numbers, p);
+      const segments = scriptSegments(p);
       exam.openPart(i);
       setStage({ kind: "announce", part: i });
-      await narrate(`p${i + 1}-announce`, NARRATION.announce(i + 1, p.context, nums[0], nums.at(-1)!));
-      if (!alive()) return;
-      setStage({ kind: "reading", part: i, until: Date.now() + READING_TIME * 1000 * k });
-      await wait(READING_TIME);
-      if (!alive()) return;
-      setStage({ kind: "playing", part: i });
-      await narrate(`p${i + 1}-listen`, NARRATION.listen(nums[0], nums.at(-1)!));
-      if (!alive()) return;
-      let played = false;
-      if (recorded) {
-        const pb = playClip(clipUrl(`p${i + 1}-script`));
-        playback.current = pb;
-        played = await pb.ok;
+      await narrate(`p${i + 1}-announce`, NARRATION.announce(i + 1, p.context, ...ranges[0]));
+      for (let s = 0; s < segments.length; s++) {
+        if (!alive()) return;
+        // Before the first segment: reading time. Before the second: the real exam's mid-part break.
+        if (s > 0) await narrate(`p${i + 1}-pause`, NARRATION.pause(recordingKind(p), ...ranges[s]));
+        if (!alive()) return;
+        setStage({ kind: "reading", part: i, until: Date.now() + READING_TIME * 1000 * k });
+        await wait(READING_TIME);
+        if (!alive()) return;
+        setStage({ kind: "playing", part: i });
+        if (s === 0) await narrate(`p${i + 1}-listen`, NARRATION.listen(...ranges[0]));
+        else await narrate(`p${i + 1}-resume`, NARRATION.resume(...ranges[s]));
+        if (!alive()) return;
+        let played = false;
+        if (recorded) {
+          const pb = playClip(clipUrl(segmentClip(i + 1, s)));
+          playback.current = pb;
+          played = await pb.ok;
+        }
+        if (!played && alive()) {
+          playback.current = playScript(segments[s], p.voices, 1, () => {});
+          await playback.current.done;
+        }
+        playback.current = null;
       }
-      if (!played && alive()) {
-        playback.current = playScript(p.script, p.voices, 1, () => {});
-        await playback.current.done;
-      }
-      playback.current = null;
       if (!alive()) return;
       await narrate(`p${i + 1}-end`, NARRATION.end(i + 1));
       if (!alive()) return;
@@ -267,34 +274,48 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
   const part = test.parts[exam.part];
   const review = phase === "review";
 
-  const playFrom = (from: number) => {
+  /** Review mode: replays the recording from script line `from` to the end of the part. */
+  const playFrom = async (from: number) => {
     playback.current?.stop();
     setReviewPlaying(true);
-    const starts = recorded?.[exam.part];
-    if (starts) {
-      const pb = playClip(clipUrl(`p${exam.part + 1}-script`), starts[from], (t) => {
-        let i = from;
-        while (i + 1 < starts.length && starts[i + 1] <= t) i++;
-        setReviewLine(i);
-      });
-      playback.current = pb;
-      pb.done.then(() => {
-        if (playback.current === pb) {
-          playback.current = null;
-          setReviewPlaying(false);
-          setReviewLine(-1);
-        }
-      });
-      return;
-    }
-    const pb = playScript(part.script.slice(from), part.voices, 1, (i) => setReviewLine(i < 0 ? -1 : i + from));
-    playback.current = pb;
-    pb.done.then(() => {
+    const segmentStarts = recorded?.[exam.part];
+    const finish = (pb: Playback) => {
       if (playback.current === pb) {
         playback.current = null;
         setReviewPlaying(false);
+        setReviewLine(-1);
       }
-    });
+    };
+    if (!segmentStarts) {
+      const pb = playScript(part.script.slice(from), part.voices, 1, (i) => setReviewLine(i < 0 ? -1 : i + from));
+      playback.current = pb;
+      pb.done.then(() => finish(pb));
+      return;
+    }
+    // Find the segment (and line within it) where `from` falls.
+    let first = 0;
+    for (let s = 0; s < segmentStarts.length; s++) {
+      const starts = segmentStarts[s];
+      const local = from - first;
+      if (local >= starts.length) {
+        first += starts.length;
+        continue;
+      }
+      const offset = first;
+      const pb = playClip(clipUrl(segmentClip(exam.part + 1, s)), starts[Math.max(0, local)], (t) => {
+        let i = Math.max(0, local);
+        while (i + 1 < starts.length && starts[i + 1] <= t) i++;
+        setReviewLine(offset + i);
+      });
+      playback.current = pb;
+      await pb.done;
+      if (playback.current !== pb) return; // stopped, or another line was clicked
+      first += starts.length;
+      from = first;
+    }
+    setReviewPlaying(false);
+    setReviewLine(-1);
+    playback.current = null;
   };
 
   return (
