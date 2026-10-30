@@ -1,5 +1,6 @@
 import type { WritingTask, WritingTest } from "@/lib/types";
 import { MORE_WRITING_TASKS } from "./writing-more";
+import { NEW_WRITING_TASKS } from "./writing-new";
 
 const T1_TIPS = [
   "Cover all three bullet points fully — missing one caps your Task Achievement score.",
@@ -206,7 +207,7 @@ Overall, while the personal and economic costs of migration should not be ignore
   },
 ];
 
-WRITING_TASKS.push(...MORE_WRITING_TASKS);
+WRITING_TASKS.push(...MORE_WRITING_TASKS, ...NEW_WRITING_TASKS);
 
 export function getWritingTask(id: string) {
   return WRITING_TASKS.find((t) => t.id === id);
@@ -222,6 +223,10 @@ export const WRITING_TESTS: WritingTest[] = [
   { id: "w-6", title: "Writing — Test 6", task1: "t1-visit", task2: "t2-university" },
   { id: "w-7", title: "Writing — Test 7", task1: "t1-landlord", task2: "t2-shopping" },
   { id: "w-8", title: "Writing — Test 8", task1: "t1-job", task2: "t2-neighbours" },
+  { id: "w-9", title: "Writing — Test 9", task1: "t1-crossing", task2: "t2-customs" },
+  { id: "w-10", title: "Writing — Test 10", task1: "t1-schedule", task2: "t2-transport" },
+  { id: "w-11", title: "Writing — Test 11", task1: "t1-advice", task2: "t2-selfemployed" },
+  { id: "w-12", title: "Writing — Test 12", task1: "t1-hotel", task2: "t2-retirement" },
 ];
 
 export function getWritingTest(id: string) {

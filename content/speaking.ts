@@ -1,4 +1,5 @@
 import type { SpeakingSet } from "@/lib/types";
+import { NEW_SPEAKING_SETS } from "./speaking-new";
 
 export const SPEAKING_SETS: SpeakingSet[] = [
   {
@@ -269,6 +270,8 @@ export const SPEAKING_SETS: SpeakingSet[] = [
 export function getSpeakingSet(id: string) {
   return SPEAKING_SETS.find((s) => s.id === id);
 }
+
+SPEAKING_SETS.push(...NEW_SPEAKING_SETS);
 
 export const SPEAKING_CRITERIA = [
   {

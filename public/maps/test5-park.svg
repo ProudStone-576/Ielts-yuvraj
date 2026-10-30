@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="600" height="420" fill="#f7f7f2"/>
+  <text x="300" y="22" text-anchor="middle" font-size="15" font-weight="bold">Riverside Country Park</text>
+  <!-- compass -->
+  <g transform="translate(560,385)">
+    <path d="M0,-18 L6,4 L0,0 L-6,4 Z" fill="#333"/>
+    <text x="0" y="-22" text-anchor="middle" font-weight="bold">N</text>
+  </g>
+  <!-- river -->
+  <path d="M0,48 C120,38 220,62 340,50 S520,36 600,50 L600,74 C520,62 440,80 340,74 S120,64 0,72 Z" fill="#b9d8ec"/>
+  <text x="70" y="64" font-style="italic" fill="#335">River Wend</text>
+  <!-- bridge -->
+  <rect x="436" y="40" width="28" height="40" fill="#c9a77a" stroke="#7a5b33"/>
+  <text x="450" y="97" text-anchor="middle" font-size="12">Bridge</text>
+  <!-- footpaths -->
+  <g fill="none" stroke="#b08a4e" stroke-width="5" stroke-dasharray="1 0" stroke-linecap="round">
+    <ellipse cx="300" cy="200" rx="165" ry="95"/>
+    <path d="M300,395 L300,295"/>
+    <path d="M120,350 C150,330 150,280 140,240"/>
+    <path d="M450,84 L450,122"/>
+  </g>
+  <!-- lake -->
+  <ellipse cx="300" cy="200" rx="120" ry="58" fill="#9fcbe6" stroke="#6aa3c8"/>
+  <text x="300" y="205" text-anchor="middle" font-style="italic" fill="#235">Lake</text>
+  <!-- labelled places -->
+  <rect x="262" y="312" width="76" height="34" rx="4" fill="#fff" stroke="#555"/>
+  <text x="300" y="333" text-anchor="middle" font-size="12">Visitor centre</text>
+  <rect x="30" y="335" width="90" height="56" rx="4" fill="#e6e6e6" stroke="#777"/>
+  <text x="75" y="367" text-anchor="middle" font-size="12">Car park</text>
+  <path d="M276,405 L324,405" stroke="#333" stroke-width="4"/>
+  <text x="300" y="398" text-anchor="middle" font-size="11">Main entrance</text>
+  <!-- trees -->
+  <g fill="#8fbf7a">
+    <circle cx="40" cy="180" r="12"/><circle cx="60" cy="205" r="10"/><circle cx="560" cy="300" r="12"/>
+    <circle cx="545" cy="330" r="9"/><circle cx="230" cy="100" r="9"/><circle cx="380" cy="100" r="9"/>
+  </g>
+  <!-- letters -->
+  <g font-weight="bold" font-size="14" text-anchor="middle">
+    <g><circle cx="128" cy="232" r="13" fill="#fff" stroke="#000"/><text x="128" y="237">A</text></g>
+    <g><circle cx="200" cy="305" r="13" fill="#fff" stroke="#000"/><text x="200" y="310">B</text></g>
+    <g><circle cx="420" cy="290" r="13" fill="#fff" stroke="#000"/><text x="420" y="295">C</text></g>
+    <g><circle cx="525" cy="235" r="13" fill="#fff" stroke="#000"/><text x="525" y="240">D</text></g>
+    <g><circle cx="490" cy="128" r="13" fill="#fff" stroke="#000"/><text x="490" y="133">E</text></g>
+    <g><circle cx="300" cy="118" r="13" fill="#fff" stroke="#000"/><text x="300" y="123">F</text></g>
+    <g><circle cx="100" cy="112" r="13" fill="#fff" stroke="#000"/><text x="100" y="117">G</text></g>
+    <g><circle cx="430" cy="372" r="13" fill="#fff" stroke="#000"/><text x="430" y="377">H</text></g>
+  </g>
+</svg>

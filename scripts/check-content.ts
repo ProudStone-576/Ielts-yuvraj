@@ -5,6 +5,7 @@
  */
 import { LISTENING_TESTS } from "@/content/listening";
 import { READING_TESTS } from "@/content/reading";
+import { sizeOf } from "@/lib/exam";
 import type { QuestionGroup } from "@/lib/types";
 
 let problems = 0;
@@ -21,7 +22,9 @@ function checkGroups(testId: string, groups: QuestionGroup[], source: string): n
   let n = 0;
   for (const g of groups)
     for (const q of g.questions) {
-      n++;
+      n += sizeOf(q);
+      if (q.type === "multi" && (new Set(q.answer).size !== q.answer.length || q.answer.some((a) => a.charCodeAt(0) - 65 >= q.options.length)))
+        fail(`${testId}: ${q.id} has a repeated or out-of-range letter`);
       if (ids.has(q.id)) fail(`${testId}: duplicate id ${q.id}`);
       ids.add(q.id);
       if (q.type === "text" && !q.answer.some((a) => norm(source).includes(norm(a)) || squash(source).includes(squash(a))))
@@ -45,14 +48,17 @@ for (const t of LISTENING_TESTS) {
     if (p.pause) {
       const { beforeLine, fromQuestion } = p.pause;
       const qs = p.groups.flatMap((g) => g.questions);
+      // fromQuestion counts question numbers, so a "Choose TWO" question advances it by two.
+      const startOf: number[] = [];
+      qs.reduce((n, q) => (startOf.push(n), n + sizeOf(q)), 0);
       if (beforeLine <= 0 || beforeLine >= p.script.length) fail(`${t.id} ${p.title}: pause line out of range`);
-      if (fromQuestion <= 0 || fromQuestion >= qs.length) fail(`${t.id} ${p.title}: pause question out of range`);
+      if (!startOf.includes(fromQuestion) || fromQuestion === 0) fail(`${t.id} ${p.title}: pause must fall between questions`);
       const half = (lines: typeof p.script) => lines.map((l) => l.text).join(" ");
       const [first, second] = [half(p.script.slice(0, beforeLine)), half(p.script.slice(beforeLine))];
       const heard = (src: string, a: string[]) => a.some((x) => norm(src).includes(norm(x)) || squash(src).includes(squash(x)));
       qs.forEach((q, i) => {
         if (q.type !== "text") return;
-        const [mine, other] = i < fromQuestion ? [first, "before"] : [second, "after"];
+        const [mine, other] = startOf[i] < fromQuestion ? [first, "before"] : [second, "after"];
         if (!heard(mine, q.answer)) fail(`${t.id}: answer for ${q.id} should be heard ${other} the break`);
       });
     }

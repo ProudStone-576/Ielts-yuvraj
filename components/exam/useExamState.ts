@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { numberQuestions, type Answers, type Block } from "@/lib/exam";
+import { numberQuestions, sizeOf, type Answers, type Block } from "@/lib/exam";
+import { chosen } from "@/lib/scoring";
+import type { Question } from "@/lib/types";
 
 /** Shared state for Listening and Reading exams: answers, review flags and navigation. */
 export function useExamState(blocks: Block[]) {
@@ -11,17 +13,32 @@ export function useExamState(blocks: Block[]) {
   const [current, setCurrent] = useState(1);
   const [part, setPart] = useState(0);
 
+  const questions = useMemo(() => {
+    const m = new Map<string, Question>();
+    for (const b of blocks) for (const g of b.groups) for (const q of g.questions) m.set(q.id, q);
+    return m;
+  }, [blocks]);
+
+  /** question number -> question id ("Choose TWO letters" questions own two numbers). */
   const idOf = useMemo(() => {
     const m = new Map<number, string>();
-    numbered.numberOf.forEach((n, id) => m.set(n, id));
+    numbered.numberOf.forEach((n, id) => {
+      for (let i = 0; i < sizeOf(questions.get(id)!); i++) m.set(n + i, id);
+    });
     return m;
-  }, [numbered]);
+  }, [numbered, questions]);
 
   const answered = useMemo(() => {
     const s = new Set<number>();
-    for (const [id, v] of Object.entries(answers)) if (v.trim()) s.add(numbered.numberOf.get(id)!);
+    for (const [id, v] of Object.entries(answers)) {
+      if (!v.trim()) continue;
+      const first = numbered.numberOf.get(id)!;
+      // For "Choose TWO letters", each letter chosen fills one of its question numbers.
+      const filled = questions.get(id)?.type === "multi" ? chosen(v).length : 1;
+      for (let i = 0; i < filled; i++) s.add(first + i);
+    }
     return s;
-  }, [answers, numbered]);
+  }, [answers, numbered, questions]);
 
   const setAnswer = useCallback((id: string, v: string) => setAnswers((a) => ({ ...a, [id]: v })), []);
 

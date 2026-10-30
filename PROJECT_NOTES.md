@@ -185,6 +185,25 @@ The owner is not a developer. They want things explained simply, step by step, a
    review highlighting) and sign-up through the browser. Planned nicer address: `ielts-yuvraj.vercel.app`
    (Vercel → ielts-coach → Settings → Domains → Add) — not added yet.
 
+### Session 5 (30 Oct 2026) — "make everything we can, free"
+
+1. **Speaking examiner voices:** the examiner script moved to `lib/speaking-script.ts` (shared with
+   `scripts/export-speaking.ts`). Each set has its own examiner (British and Canadian Azure voices, rotating);
+   `make-audio.py --speaking` records every sentence to `public/audio/speaking/<set>/<hash>.mp3`, mapped in the
+   generated `content/speaking-audio.ts`. Missing clips fall back to browser speech.
+2. **New question types:** `multi` ("Choose TWO letters": one question worth `answer.length` numbers and marks,
+   any order; stored as "A,C") and map/plan labelling (`image` on a question group + letter options). Numbering,
+   navigator, scoring, review and `check:content` all understand them. `pause.fromQuestion` now counts question
+   numbers.
+3. **New content:** Listening tests 5-6 (`content/listening-new.ts`, maps in `public/maps/`), Reading tests 5-6
+   (`content/reading-new.ts`), Writing tests 9-12 (`content/writing-new.ts`), Speaking sets 11-16
+   (`content/speaking-new.ts`). Totals: 6 Listening, 6 Reading, 12 Writing, 16 Speaking.
+4. **Writing feedback (free, automatic):** `lib/analyse.ts` now also flags common misspellings, typical learner
+   grammar errors, informal words in essays/formal letters, a missing position in the introduction and a missing
+   conclusion. All 24 model answers pass (one pre-existing linker note on t2-traffic).
+5. Checks: answer keys valid (472 questions), all written answers in Listening 5-6 audible by transcription,
+   browser run of Listening 5 (map, Choose TWO, 27 recordings), Reading 5-6, Writing 9 and Speaking examiner clips.
+
 ## 6. Repositories — important
 
 - **`proudstone-576/c9orf72-als-proteostasis-study`** is the **friend's ALS research repo**. The cloud session

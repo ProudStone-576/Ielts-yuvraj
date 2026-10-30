@@ -7,9 +7,12 @@ import { Rubric, rubricBand } from "@/components/Rubric";
 import { FILLERS, SPEAKING_CRITERIA } from "@/content/speaking";
 import { startSession, transcriptionSupported, type Session } from "@/lib/recorder";
 import { countWords, formatBand } from "@/lib/scoring";
-import { speak } from "@/lib/speech";
+import { SPEAKING_AUDIO } from "@/content/speaking-audio";
+import { playClip, unlockAudio } from "@/lib/audio";
+import { speak, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { SpeakingSet } from "@/lib/types";
+import { buildSteps, examinerFor, EXAMINER_LINES, type Step } from "@/lib/speaking-script";
 import { formatClock, useCountdown } from "@/lib/useTimer";
 import { YuvrajSays } from "@/components/Yuvraj";
 
@@ -20,62 +23,10 @@ import { YuvrajSays } from "@/components/Yuvraj";
  * app moves on if an answer runs too long.
  */
 
-type Step =
-  | { part: 0 | 1 | 3; kind: "ask"; say: string; question: string; limit: number }
-  | { part: 2; kind: "prep" }
-  | { part: 2; kind: "talk" }
-  | { part: 2; kind: "ask"; say: string; question: string; limit: number };
-
 interface PartResult {
   url?: string;
   transcript: string;
   seconds: number;
-}
-
-function buildSteps(set: SpeakingSet): Step[] {
-  const steps: Step[] = [
-    {
-      part: 0,
-      kind: "ask",
-      say: "Good afternoon. My name is Sarah and I will be your examiner today. Can you tell me your full name, please?",
-      question: "Can you tell me your full name, please?",
-      limit: 20,
-    },
-    { part: 0, kind: "ask", say: "Thank you. And what shall I call you?", question: "What shall I call you?", limit: 15 },
-    {
-      part: 0,
-      kind: "ask",
-      say: "Thank you. Can you tell me where you're from?",
-      question: "Can you tell me where you're from?",
-      limit: 20,
-    },
-  ];
-  set.part1.forEach((topic, ti) => {
-    topic.questions.forEach((q, qi) => {
-      const lead =
-        ti === 0 && qi === 0
-          ? `Thank you. Now, in this first part, I'd like to ask you some questions about yourself. Let's talk about ${topic.topic.toLowerCase()}. `
-          : qi === 0
-            ? `Now let's talk about ${topic.topic.toLowerCase()}. `
-            : "";
-      steps.push({ part: 1, kind: "ask", say: lead + q, question: q, limit: 40 });
-    });
-  });
-  steps.push({ part: 2, kind: "prep" }, { part: 2, kind: "talk" });
-  steps.push({ part: 2, kind: "ask", say: `Thank you. ${set.part2.followUp}`, question: set.part2.followUp, limit: 20 });
-  set.part3.questions.forEach((q, i) =>
-    steps.push({
-      part: 3,
-      kind: "ask",
-      say:
-        i === 0
-          ? `Thank you. We've been talking about ${set.part2.cue.replace(/^Describe /, "").replace(/\.$/, "")}, and I'd like to discuss with you one or two more general questions related to this. Let's consider ${set.part3.topic.toLowerCase()}. ${q}`
-          : q,
-      question: q,
-      limit: 75,
-    }),
-  );
-  return steps;
 }
 
 /** Recordings are grouped by part; the introduction counts as Part 1 and Part 2 preparation isn't recorded. */
@@ -129,19 +80,27 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
     if (key !== null) session.current = { key, s: startSession(stream, () => {}), startedAt: Date.now() };
   }, [key, phase, stream]);
 
+  /** The examiner says `text`: a recording of a natural voice when there is one, otherwise the browser voice. */
+  const voice = useRef<Playback | null>(null);
+  const say = async (text: string) => {
+    voice.current?.stop();
+    const file = SPEAKING_AUDIO[set.id]?.[text];
+    if (file) {
+      const pb = playClip(`/audio/speaking/${set.id}/${file}`);
+      voice.current = pb;
+      const ok = await pb.ok;
+      if (voice.current === pb) voice.current = null;
+      if (ok) return;
+    }
+    await speak(text);
+  };
+
   // The examiner speaks at each step.
   useEffect(() => {
     if (!step) return;
-    let text = "";
-    if (step.kind === "ask") text = step.say;
-    if (step.kind === "prep")
-      text =
-        "Now, I'm going to give you a topic, and I'd like you to talk about it for one to two minutes. Before you talk, you'll have one minute to think about what you're going to say. You can make some notes if you wish. Here is your topic.";
-    if (step.kind === "talk")
-      text =
-        "All right? Remember, you have one to two minutes for this, so don't worry if I stop you. I'll tell you when the time is up. Can you start speaking now, please?";
+    const text = step.kind === "ask" ? step.say : step.kind === "prep" ? EXAMINER_LINES.prep : EXAMINER_LINES.talk;
     setExaminerSpeaking(true);
-    speak(text).then(() => setExaminerSpeaking(false));
+    say(text).then(() => setExaminerSpeaking(false));
   }, [step]);
 
   // Release the microphone when leaving the page.
@@ -150,13 +109,14 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
       session.current?.s.stop();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       speechSynthesis.cancel();
+      voice.current?.stop();
     },
     [],
   );
 
   const finish = async () => {
     closeSession();
-    await speak("Thank you. That is the end of the speaking test.");
+    await say(EXAMINER_LINES.end);
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setPhase("assess");
   };
@@ -172,13 +132,14 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
     answerLimit,
     phase === "test" && !examinerSpeaking && answerLimit > 0,
     () => {
-      if (step?.kind === "talk") speak("Thank you.").then(next);
+      if (step?.kind === "talk") say(EXAMINER_LINES.timeUp).then(next);
       else next();
     },
     index,
   );
 
   const begin = async () => {
+    unlockAudio();
     try {
       setStream(await navigator.mediaDevices.getUserMedia({ audio: true }));
     } catch {
@@ -285,7 +246,7 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
               {step.kind === "ask" && (step.part === 1 || step.part === 3) && (
                 <button className="btn" disabled={examinerSpeaking} onClick={() => {
                   setExaminerSpeaking(true);
-                  speak(step.question).then(() => setExaminerSpeaking(false));
+                  say(step.question).then(() => setExaminerSpeaking(false));
                 }}>
                   &quot;Could you repeat the question?&quot;
                 </button>

@@ -1,4 +1,4 @@
-import { isCorrect } from "./scoring";
+import { marks } from "./scoring";
 import type { Question, QuestionGroup, SkillScore } from "./types";
 
 export type Answers = Record<string, string>;
@@ -9,11 +9,16 @@ export interface Block {
 }
 
 export interface Numbered {
-  /** question id -> question number (1..40) */
+  /** question id -> its (first) question number (1..40) */
   numberOf: Map<string, number>;
   /** blocks (parts/sections) with the question numbers they contain */
   parts: { label: string; numbers: number[] }[];
   total: number;
+}
+
+/** How many question numbers (and marks) a question has: 2 for "Choose TWO letters", otherwise 1. */
+export function sizeOf(q: Question): number {
+  return q.type === "multi" ? q.answer.length : 1;
 }
 
 export function numberQuestions(blocks: Block[]): Numbered {
@@ -23,8 +28,8 @@ export function numberQuestions(blocks: Block[]): Numbered {
     const numbers: number[] = [];
     for (const g of b.groups)
       for (const q of g.questions) {
-        numberOf.set(q.id, ++n);
-        numbers.push(n);
+        numberOf.set(q.id, n + 1);
+        for (let i = 0; i < sizeOf(q); i++) numbers.push(++n);
       }
     return { label: b.label, numbers };
   });
@@ -39,6 +44,7 @@ export function skillOf(group: QuestionGroup, q: Question): string {
     case "ynng":
       return "Yes / No / Not Given";
     case "mcq":
+    case "multi":
       return "Multiple choice";
     case "select":
       return group.options?.[0]?.value === "i" ? "Matching headings" : "Matching";
@@ -53,11 +59,11 @@ export function scoreBlocks(blocks: Block[], answers: Answers) {
   for (const b of blocks)
     for (const g of b.groups)
       for (const q of g.questions) {
-        const ok = isCorrect(q, answers[q.id]);
-        if (ok) raw++;
+        const got = marks(q, answers[q.id]);
+        raw += got;
         const s = (breakdown[skillOf(g, q)] ??= { c: 0, t: 0 });
-        s.t++;
-        if (ok) s.c++;
+        s.t += sizeOf(q);
+        s.c += got;
       }
   return { raw, breakdown };
 }

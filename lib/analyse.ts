@@ -28,6 +28,10 @@ export interface Analysis {
   overused: { word: string; count: number }[];
 }
 
+function lower(text: string): string {
+  return ` ${text.toLowerCase().replace(/[^a-z'\s-]/g, " ").replace(/\s+/g, " ")} `;
+}
+
 export function analyse(text: string): Analysis {
   const lower = ` ${text.toLowerCase().replace(/[^a-z'\s-]/g, " ").replace(/\s+/g, " ")} `;
   const words = countWords(text);
@@ -67,6 +71,46 @@ export interface Check {
   text: string;
 }
 
+/** Words IELTS candidates most often misspell -> correct spelling. */
+const SPELLING: Record<string, string> = {
+  accomodation: "accommodation", acommodation: "accommodation", enviroment: "environment", goverment: "government",
+  definately: "definitely", definatly: "definitely", seperate: "separate", neccessary: "necessary", necesary: "necessary",
+  recieve: "receive", beleive: "believe", belive: "believe", untill: "until", tommorow: "tomorrow", tomorow: "tomorrow",
+  wich: "which", thier: "their", alot: "a lot", occured: "occurred", occurence: "occurrence", begining: "beginning",
+  buisness: "business", bussiness: "business", comittee: "committee", commitee: "committee", adress: "address",
+  embarassed: "embarrassed", existance: "existence", independant: "independent", knowlege: "knowledge",
+  responsability: "responsibility", sucess: "success", succesful: "successful", successfull: "successful",
+  wierd: "weird", writting: "writing", becuase: "because", beacuse: "because", truely: "truly",
+  arguement: "argument", developement: "development", disapear: "disappear", dissapear: "disappear",
+  oppurtunity: "opportunity", oportunity: "opportunity", recomend: "recommend", reccomend: "recommend",
+  priviledge: "privilege", tecnology: "technology", technolgy: "technology", familys: "families", childs: "children",
+};
+
+/** Typical learner errors (pattern, explanation). */
+const ERRORS: [RegExp, string][] = [
+  [/\binformations\b/i, "'information' has no plural — say 'information' or 'pieces of information'"],
+  [/\badvices\b/i, "'advice' has no plural — say 'advice' or 'pieces of advice'"],
+  [/\bfurnitures\b/i, "'furniture' has no plural"],
+  [/\bequipments\b/i, "'equipment' has no plural"],
+  [/\bknowledges\b/i, "'knowledge' has no plural"],
+  [/\bpeoples\b/i, "'people' is already plural (only 'peoples' for nations)"],
+  [/\bin nowadays\b/i, "say 'nowadays', not 'in nowadays'"],
+  [/\bdiscuss about\b/i, "say 'discuss something', not 'discuss about'"],
+  [/\bexplain (me|him|her|us|them)\b/i, "say 'explain to me', not 'explain me'"],
+  [/\baccording to me\b/i, "say 'in my opinion' or 'I believe', not 'according to me'"],
+  [/\bmore (better|worse|easier|cheaper|bigger)\b/i, "don't use 'more' with comparatives ('better', not 'more better')"],
+  [/\bdespite of\b/i, "say 'despite' or 'in spite of', not 'despite of'"],
+  [/\b(could|would|should) of\b/i, "write 'could have', not 'could of'"],
+  [/\bwhom (is|are|was|were)\b/i, "use 'who' as the subject: 'who is…'"],
+  [/\bthe most of\b/i, "say 'most of', not 'the most of'"],
+  [/\bvery very\b/i, "avoid 'very very' — choose a stronger word (extremely, enormous)"],
+  [/(^|[.!?]\s+)i\b/m, "write 'I' with a capital letter"],
+  [/\b(a|an) (\w+) (people|children|students)\b/i, "'a/an' cannot go with a plural noun"],
+];
+
+/** Too informal for an essay or a formal letter. */
+const INFORMAL = ["gonna", "wanna", "kids", "stuff", "awesome", "okay", "ok", "guys", "a lot of", "lots of", "really", "pretty much", "nowadays people"];
+
 export function checksFor(task: 1 | 2, kind: string, text: string, minWords: number): Check[] {
   const a = analyse(text);
   const first = text.trim().split("\n")[0]?.toLowerCase() ?? "";
@@ -99,6 +143,46 @@ export function checksFor(task: 1 | 2, kind: string, text: string, minWords: num
         : "No heavily repeated words",
     },
   ];
+
+  // Spelling and common grammar mistakes.
+  const misspelled = [...new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((w) => SPELLING[w]))];
+  checks.push({
+    ok: misspelled.length === 0,
+    text: misspelled.length
+      ? `Spelling: ${misspelled.map((w) => `${w} → ${SPELLING[w]}`).join(", ")}`
+      : "No common spelling mistakes found",
+  });
+  const errors = ERRORS.filter(([re]) => re.test(text)).map(([, why]) => why);
+  checks.push({
+    ok: errors.length === 0,
+    text: errors.length ? `Grammar to check: ${errors.join("; ")}` : "None of the most common learner errors found",
+  });
+
+  const formalRegister = task === 2 || !kind.startsWith("Informal");
+  if (formalRegister) {
+    const casual = INFORMAL.filter((w) => lower(text).includes(` ${w} `));
+    checks.push({
+      ok: casual.length === 0,
+      text: casual.length
+        ? `Too informal here: ${casual.map((w) => `'${w}'`).join(", ")} — try 'many', 'children', 'things' → specific nouns, 'very' → 'extremely'`
+        : "Vocabulary is suitably formal",
+    });
+  }
+
+  if (task === 2) {
+    const paras = text.split(/\n\s*\n/).filter((p) => p.trim());
+    const opinion =
+      /\b(i (strongly |firmly |would |do not |don't )?(believe|think|feel|agree|disagree|argue)|in my (opinion|view)|my view is|i am convinced|personally|this essay (will )?(argue|discuss|examine|explore|consider|outline|suggest))/i;
+    checks.push(
+      { ok: opinion.test(paras[0] ?? ""), text: "Introduction gives your position or says what the essay will do" },
+      {
+        ok: /^(in conclusion|to conclude|to sum up|to summarise|overall|in summary|in short|all in all|on balance|for these reasons|in my (view|opinion))/i.test(
+          (paras.at(-1) ?? "").trim(),
+        ),
+        text: "Final paragraph is clearly a conclusion (In conclusion, Overall, To sum up…)",
+      },
+    );
+  }
 
   if (task === 1) {
     const formal = kind.startsWith("Formal");

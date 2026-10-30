@@ -27,6 +27,8 @@ export const SKILL_TIPS: Record<string, string> = {
     "The sentence paraphrases the text, so look for synonyms rather than the same words. Your answer must make the completed sentence grammatical.",
   "Summary completion":
     "Find which part of the text the summary covers (usually one or two paragraphs), then read that part carefully. Decide whether each gap needs a noun, verb or adjective.",
+  "Map / plan labelling":
+    "Before the recording starts, find where 'you' are on the map (usually the entrance) and the north arrow. Listen for direction words — on your left, opposite, beyond, next to — and follow the speaker's route with your finger.",
   "Table completion":
     "Read across the rows and down the columns to understand the structure before you start. Gaps in the same column usually need the same type of word.",
 };

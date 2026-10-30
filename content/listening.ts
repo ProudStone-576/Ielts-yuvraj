@@ -1,5 +1,6 @@
 import type { ListeningTest } from "@/lib/types";
 import { MORE_LISTENING_TESTS } from "./listening-more";
+import { NEW_LISTENING_TESTS } from "./listening-new";
 
 export const LISTENING_TESTS: ListeningTest[] = [
   {
@@ -303,7 +304,7 @@ export const LISTENING_TESTS: ListeningTest[] = [
   },
 ];
 
-LISTENING_TESTS.push(...MORE_LISTENING_TESTS);
+LISTENING_TESTS.push(...MORE_LISTENING_TESTS, ...NEW_LISTENING_TESTS);
 
 export function getListeningTest(id: string) {
   return LISTENING_TESTS.find((t) => t.id === id);

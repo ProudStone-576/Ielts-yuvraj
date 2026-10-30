@@ -1,7 +1,7 @@
 "use client";
 
-import { displayAnswer, isCorrect } from "@/lib/scoring";
-import type { Answers } from "@/lib/exam";
+import { chosen, displayAnswer, isCorrect } from "@/lib/scoring";
+import { sizeOf, type Answers } from "@/lib/exam";
 import type { Question, QuestionGroup } from "@/lib/types";
 
 interface Props {
@@ -20,7 +20,7 @@ export function QuestionGroups({ groups, numberOf, answers, onChange, submitted,
     <div className="stack">
       {groups.map((g, gi) => {
         const first = numberOf.get(g.questions[0].id) ?? 1;
-        const last = first + g.questions.length - 1;
+        const last = first + g.questions.reduce((n, q) => n + sizeOf(q), 0) - 1;
         return (
           <section key={gi} className="qgroup">
             <h4>
@@ -28,7 +28,10 @@ export function QuestionGroups({ groups, numberOf, answers, onChange, submitted,
               {last > first ? `–${last}` : ""}
             </h4>
             <p className="instructions">{g.instructions}</p>
-            {g.options && (
+            {g.image && (
+              <img className="q-map" src={g.image.src} alt={g.image.alt} />
+            )}
+            {g.options && !g.image && (
               <ul className="option-list">
                 {g.options.map((o) => (
                   <li key={o.value}>
@@ -90,12 +93,18 @@ function QuestionRow({
   onFocus: () => void;
 }) {
   const correct = submitted && isCorrect(q, value);
+  const size = sizeOf(q);
+  const picked = chosen(value);
   const cls = ["q", current ? "current" : "", submitted ? (correct ? "correct" : "wrong") : ""].join(" ");
 
   return (
     <div id={`q-${n}`} className={cls} onFocusCapture={onFocus} onClick={onFocus}>
+      {/* Extra anchors so the navigator can jump to every number of a "Choose TWO" question. */}
+      {Array.from({ length: size - 1 }, (_, i) => (
+        <span key={i} id={`q-${n + i + 1}`} />
+      ))}
       <div className="qnum-label">
-        <b>{n}</b>
+        <b>{size > 1 ? `${n}–${n + size - 1}` : n}</b>
         {flagged && !submitted && <span className="flag-dot" title="Marked for review" />}
       </div>
       <div className="qbody">
@@ -119,6 +128,26 @@ function QuestionRow({
               return (
                 <label key={letter} className="choice">
                   <input type="radio" name={q.id} checked={value === letter} disabled={submitted} onChange={() => onChange(letter)} />
+                  <b>{letter}</b> {opt}
+                </label>
+              );
+            })}
+          </div>
+        )}
+        {q.type === "multi" && (
+          <div className="choices">
+            {q.options.map((opt, i) => {
+              const letter = String.fromCharCode(65 + i);
+              const on = picked.includes(letter);
+              return (
+                <label key={letter} className="choice">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    // Like the real test, you can't tick more letters than there are answers.
+                    disabled={submitted || (!on && picked.length >= size)}
+                    onChange={() => onChange((on ? picked.filter((l) => l !== letter) : [...picked, letter]).sort().join(","))}
+                  />
                   <b>{letter}</b> {opt}
                 </label>
               );
@@ -149,7 +178,7 @@ function QuestionRow({
           <div className="feedback">
             {value ? (
               <>
-                Your answer: <s>{value}</s> ·{" "}
+                Your answer: <s>{value.replace(",", " and ")}</s> ·{" "}
               </>
             ) : (
               "Not answered · "

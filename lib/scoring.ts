@@ -77,8 +77,20 @@ function normalise(s: string): string {
     .trim();
 }
 
+/** The letters chosen for a "Choose TWO letters" question, stored as "A,C". */
+export function chosen(given: string | undefined): string[] {
+  return given ? given.split(",").filter(Boolean) : [];
+}
+
+/** Marks scored: one per correct letter for "Choose TWO letters" (in any order), otherwise 0 or 1. */
+export function marks(q: Question, given: string | undefined): number {
+  if (q.type === "multi") return chosen(given).filter((l) => q.answer.includes(l)).length;
+  return isCorrect(q, given) ? 1 : 0;
+}
+
 export function isCorrect(q: Question, given: string | undefined): boolean {
   if (!given) return false;
+  if (q.type === "multi") return marks(q, given) === q.answer.length;
   if (q.type === "text") {
     const g = normalise(given);
     return q.answer.some((a) => normalise(a) === g);
@@ -87,6 +99,7 @@ export function isCorrect(q: Question, given: string | undefined): boolean {
 }
 
 export function displayAnswer(q: Question): string {
+  if (q.type === "multi") return q.answer.join(" and ");
   return q.type === "text" ? q.answer.join(" / ") : q.answer;
 }
 

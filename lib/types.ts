@@ -16,7 +16,9 @@ export type Question =
   | { id: string; type: "tfng"; prompt: string; answer: "TRUE" | "FALSE" | "NOT GIVEN" }
   | { id: string; type: "ynng"; prompt: string; answer: "YES" | "NO" | "NOT GIVEN" }
   | { id: string; type: "select"; prompt: string; answer: string }
-  | { id: string; type: "text"; prompt: string; answer: string[] };
+  | { id: string; type: "text"; prompt: string; answer: string[] }
+  /** "Choose TWO letters": one question worth answer.length marks and question numbers, in any order. */
+  | { id: string; type: "multi"; prompt: string; options: string[]; answer: string[] };
 
 export interface QuestionGroup {
   instructions: string;
@@ -24,6 +26,8 @@ export interface QuestionGroup {
   skill?: string;
   /** Shared options for "select" (matching) questions, e.g. [{value:"A", label:"..."}] */
   options?: { value: string; label: string }[];
+  /** A map or plan shown above the questions (map/plan labelling). */
+  image?: { src: string; alt: string };
   questions: Question[];
 }
 
@@ -54,7 +58,7 @@ export interface ListeningPart {
   /**
    * The real exam's mid-part break: "Before you hear the rest of the conversation, you have some time to look
    * at questions 7 to 10." The recording stops before script line `beforeLine`; `fromQuestion` is the
-   * (0-based, within this part) index of the first question answered after the break.
+   * (0-based, within this part) index of the first question number answered after the break.
    */
   pause?: { beforeLine: number; fromQuestion: number };
   groups: QuestionGroup[];
