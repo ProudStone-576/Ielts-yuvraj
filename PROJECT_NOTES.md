@@ -36,7 +36,11 @@ The owner is not a developer. They want things explained simply, step by step, a
 
 ## 3. Current status (end of session 1, 29 Oct 2026)
 
-- **Live app:** https://ielts-coach-pi.vercel.app (Vercel project `ielts-coach`, account scope `urbanthug`).
+- **Since session 4 the live app is https://ielts-coach-fawn.vercel.app** — Vercel project `ielts-coach` in the
+  **proudstone-576** account, connected to GitHub: every push to `main` deploys automatically. Database = Neon
+  project `ielts-coach` (`lucky-dream-63977253`) in the owner's own Neon account. The old urbanthug site
+  (ielts-coach-pi) and its database are no longer updated; accounts made there do not exist on the new site.
+- Old (sessions 1-3): https://ielts-coach-pi.vercel.app (Vercel project `ielts-coach`, account scope `urbanthug`).
 - **Deployment protection:** turned OFF by the owner so the link is public (no Vercel login needed).
 - **Database:** **Neon Postgres** connected to the Vercel project (env vars `DATABASE_URL`, `POSTGRES_URL`, …
   present for production/preview/development). The app creates its own table `ielts_kv` on first use.
@@ -165,6 +169,18 @@ The owner is not a developer. They want things explained simply, step by step, a
    regenerate the Azure key afterwards; a new key is needed to re-record.
 4. Not live yet: the last token was for one deploy only; production needs a new token or the urbanthug ↔ GitHub
    connection (see session 2, item 7).
+
+### Session 4 (30 Oct 2026, on the owner's own computer)
+
+1. Repo cloned to `C:\Users\taran\sample_project\ielts coaching`. GitHub default branch switched to `main`.
+2. Owner chose to **move hosting to their own Vercel account (proudstone-576)** instead of fixing urbanthug.
+   Created Vercel project `ielts-coach`, linked it to `ProudStone-576/Ielts-coach` (production branch `main`),
+   new Neon project `ielts-coach` (aws-us-east-1), env vars `DATABASE_URL` + `AUTH_SECRET` for all environments.
+3. Gotcha: a project created from the CLI gets framework preset "Other" → build succeeds but every route 404s.
+   Fixed with `vercel.json` (`"framework": "nextjs"`).
+4. **Live and verified:** https://ielts-coach-fawn.vercel.app (session 3's Azure voices + full-length Listening
+   now live). Signed up a test account via the API, read progress back, then deleted the test row.
+   The friend must create a new account on the new link (old progress stayed in the urbanthug database).
 
 ## 6. Repositories — important
 
