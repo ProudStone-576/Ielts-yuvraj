@@ -159,8 +159,10 @@ The owner is not a developer. They want things explained simply, step by step, a
    Kokoro (real CD-IELTS ≈ 30). Reading/Writing/Speaking timings already matched the real exam.
 3. Owner chose **Microsoft Azure** neural voices (free F0 tier). `make-audio.py` uses Azure when
    `AZURE_SPEECH_KEY` (+ `AZURE_SPEECH_REGION`) is set, otherwise Kokoro; every line is cached in
-   `~/.cache/ielts-tts`. Network needs `<region>.tts.speech.microsoft.com` allowed. Waiting for the owner's key;
-   meanwhile the new scripts are recorded with Kokoro (all 87 written answers verified audible).
+   `~/.cache/ielts-tts`. Network needs `<region>.tts.speech.microsoft.com` allowed. **Recorded with Azure**
+   (region eastus, 24 voices incl. real Australian accents; narrator en-GB-RyanNeural): 130-165 wpm, whole test
+   23-26 min, all 87 written answers verified audible, full run checked in the browser. The owner was asked to
+   regenerate the Azure key afterwards; a new key is needed to re-record.
 4. Not live yet: the last token was for one deploy only; production needs a new token or the urbanthug ↔ GitHub
    connection (see session 2, item 7).
 
