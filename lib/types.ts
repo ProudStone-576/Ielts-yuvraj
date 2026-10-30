@@ -123,6 +123,8 @@ export interface Attempt {
   notes?: string;
   /** Correct / total per question type, for weak-area analysis. */
   breakdown?: Record<string, SkillScore>;
+  /** Questions answered wrongly (Listening and Reading), for the mistake notebook. */
+  mistakes?: { id: string; given: string }[];
 }
 
 export interface Store {
@@ -138,4 +140,15 @@ export interface Store {
   /** Ids of attempts deleted on any device, so they don't come back when merging. */
   deleted: string[];
   drafts: Record<string, string>;
+  /** Dictation drill results by drill set id. */
+  drills: Record<string, DrillResult>;
+  /** Question ids from the mistake notebook that have since been answered correctly. */
+  mastered: string[];
+}
+
+export interface DrillResult {
+  best: number;
+  last: number;
+  total: number;
+  date: string;
 }

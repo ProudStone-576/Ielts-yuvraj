@@ -55,15 +55,17 @@ export function skillOf(group: QuestionGroup, q: Question): string {
 
 export function scoreBlocks(blocks: Block[], answers: Answers) {
   let raw = 0;
+  const mistakes: { id: string; given: string }[] = [];
   const breakdown: Record<string, SkillScore> = {};
   for (const b of blocks)
     for (const g of b.groups)
       for (const q of g.questions) {
         const got = marks(q, answers[q.id]);
         raw += got;
+        if (got < sizeOf(q)) mistakes.push({ id: q.id, given: answers[q.id] ?? "" });
         const s = (breakdown[skillOf(g, q)] ??= { c: 0, t: 0 });
         s.t += sizeOf(q);
         s.c += got;
       }
-  return { raw, breakdown };
+  return { raw, breakdown, mistakes };
 }

@@ -96,6 +96,7 @@ export function ListeningRunner({ test }: { test: ListeningTest }) {
       raw: r.raw,
       total: exam.numbered.total,
       breakdown: r.breakdown,
+      mistakes: r.mistakes,
     });
     setPhase("results");
   };

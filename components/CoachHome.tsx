@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { PosterCard } from "@/components/TestList";
 import { COACH_NAME, YuvrajAvatar } from "@/components/Yuvraj";
 import {
@@ -17,6 +18,7 @@ import {
   weakAreas,
 } from "@/lib/coach";
 import type { CatalogItem } from "@/lib/catalog";
+import { countOpenMistakes } from "@/lib/mistake-count";
 import { bandToClb, formatBand } from "@/lib/scoring";
 import { useStore } from "@/lib/storage";
 import { MODULE_LABEL, MODULES, type Module, type Store } from "@/lib/types";
@@ -41,6 +43,7 @@ export function CoachHome({ catalog }: { catalog: Record<Module, CatalogItem[]> 
   const atTarget = MODULES.filter((m) => g[m] <= 0).length;
   const run = streak(store.attempts);
   const recent = [...store.attempts].reverse().slice(0, 5);
+  const toReview = useMemo(() => countOpenMistakes(store.attempts, store.mastered), [store.attempts, store.mastered]);
   const first = plan[0];
   const firstTest = first && nextTest(store, first.module, catalog[first.module]);
 
@@ -141,6 +144,20 @@ export function CoachHome({ catalog }: { catalog: Record<Module, CatalogItem[]> 
           })}
         </div>
       </section>
+
+      {toReview > 0 && (
+        <Link href="/mistakes" className="card coach-note review-card">
+          <YuvrajAvatar />
+          <div>
+            <b>
+              {toReview} question{toReview === 1 ? "" : "s"} in your mistake notebook
+            </b>
+            <p className="small muted" style={{ margin: "0.25rem 0 0" }}>
+              Ten minutes on these is worth more than a new test. Get them right and they disappear. →
+            </p>
+          </div>
+        </Link>
+      )}
 
       {plan.length === 0 && (
         <section className="card done-today">

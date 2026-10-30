@@ -12,6 +12,8 @@ export function emptyStore(owner = ""): Store {
     attempts: [],
     deleted: [],
     drafts: {},
+    drills: {},
+    mastered: [],
   };
 }
 
@@ -26,6 +28,8 @@ export function normalise(data: Partial<Store> | null | undefined): Store {
     attempts: Array.isArray(data.attempts) ? data.attempts : [],
     deleted: Array.isArray(data.deleted) ? data.deleted : [],
     drafts: data.drafts && typeof data.drafts === "object" ? data.drafts : {},
+    drills: data.drills && typeof data.drills === "object" ? data.drills : {},
+    mastered: Array.isArray(data.mastered) ? data.mastered : [],
   };
 }
 
@@ -50,7 +54,19 @@ export function mergeStores(a: Store, b: Store): Store {
     attempts,
     deleted,
     drafts: { ...older.drafts, ...newer.drafts },
+    drills: mergeDrills(older.drills, newer.drills),
+    mastered: [...new Set([...a.mastered, ...b.mastered])],
   };
+}
+
+/** Keeps the best score from either copy, and the most recent attempt. */
+function mergeDrills(older: Store["drills"], newer: Store["drills"]): Store["drills"] {
+  const out = { ...older };
+  for (const [id, r] of Object.entries(newer)) {
+    const o = out[id];
+    out[id] = o ? { ...(r.date >= o.date ? r : o), best: Math.max(o.best, r.best) } : r;
+  }
+  return out;
 }
 
 export function sameData(a: Store, b: Store): boolean {

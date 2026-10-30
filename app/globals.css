@@ -734,3 +734,26 @@ input[type="date"] { color-scheme: dark; }
 
 /* Map / plan labelling */
 .q-map { display: block; width: 100%; max-width: 560px; height: auto; margin: 0.25rem 0 1rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+
+/* Dictation drills */
+.drill-progress { display: flex; gap: 6px; }
+.drill-progress span { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); }
+.drill-progress span.cur { background: var(--accent); }
+.drill-progress span.ok { background: var(--good); }
+.drill-progress span.bad { background: var(--bad); }
+.drill-card { max-width: 640px; }
+.drill-input { font-size: 1.25rem; padding: 0.65rem 0.8rem; letter-spacing: 0.02em; }
+.drill-feedback { padding: 0.8rem 1rem; border-radius: 10px; display: flex; flex-direction: column; gap: 0.3rem; }
+.drill-feedback.ok { background: var(--good-soft); }
+.drill-feedback.bad { background: var(--bad-soft); }
+.drill-feedback.ok b { color: var(--good); }
+.drill-feedback.bad b { color: var(--bad); }
+a.drill-promo { color: var(--text); }
+a.drill-promo:hover { text-decoration: none; border-color: var(--accent); }
+
+/* Mistake notebook: the question itself uses the light exam style */
+.mistake-q { position: static; inset: auto; z-index: auto; display: block; background: var(--bg); border-radius: 10px; padding: 0.9rem 1rem; }
+.mistake.fixed { border-color: var(--good); }
+.mistake .q-map { max-width: 460px; }
+a.review-card { color: var(--text); align-items: center; }
+a.review-card:hover { text-decoration: none; border-color: var(--accent); }

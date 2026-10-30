@@ -9,9 +9,11 @@ const LINKS = [
   { href: "/", label: "Home" },
   { href: "/plan", label: "Study plan" },
   { href: "/listening", label: "Listening" },
+  { href: "/drills", label: "Drills" },
   { href: "/reading", label: "Reading" },
   { href: "/writing", label: "Writing" },
   { href: "/speaking", label: "Speaking" },
+  { href: "/mistakes", label: "Mistakes" },
   { href: "/progress", label: "Progress" },
 ];
 

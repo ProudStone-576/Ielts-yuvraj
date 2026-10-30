@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { catalog } from "@/lib/catalog";
 import { TestList } from "@/components/TestList";
 
@@ -13,6 +14,14 @@ export default function ListeningHome() {
         </p>
       </div>
       <TestList module="listening" tests={catalog().listening} />
+      <Link href="/drills" className="card coach-note drill-promo">
+        <div>
+          <b>New: 5-minute dictation drills</b>
+          <p className="small muted" style={{ margin: "0.3rem 0 0" }}>
+            Names, postcodes, phone numbers, dates and tricky spellings — the details that decide band 8.
+          </p>
+        </div>
+      </Link>
       <div className="card">
         <h3>Yuvraj&apos;s tips for band 8</h3>
         <ul className="small" style={{ margin: 0, paddingLeft: "1.2rem" }}>
