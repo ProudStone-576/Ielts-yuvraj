@@ -36,7 +36,7 @@ The owner is not a developer. They want things explained simply, step by step, a
 
 ## 3. Current status (end of session 1, 29 Oct 2026)
 
-- **Live app:** https://ielts-coach-pi.vercel.app (Vercel project `ielts-coach`, account scope `urbanthug`).
+- **Live app:** https://ielts-coach-fawn.vercel.app (Taran's Vercel, auto-deploys `main`; see session 3). Old: https://ielts-coach-pi.vercel.app (urbanthug, stale).
 - **Deployment protection:** turned OFF by the owner so the link is public (no Vercel login needed).
 - **Database:** **Neon Postgres** connected to the Vercel project (env vars `DATABASE_URL`, `POSTGRES_URL`, …
   present for production/preview/development). The app creates its own table `ielts_kv` on first use.
@@ -165,6 +165,14 @@ The owner is not a developer. They want things explained simply, step by step, a
    regenerate the Azure key afterwards; a new key is needed to re-record.
 4. Not live yet: the last token was for one deploy only; production needs a new token or the urbanthug ↔ GitHub
    connection (see session 2, item 7).
+
+5. **New home (from 30 Oct):** Taran connected GitHub from his own Vercel account (team "proudstone-576s-projects"),
+   which created a new `ielts-coach` project that **auto-deploys every push to `main`**. Live at
+   **https://ielts-coach-fawn.vercel.app** (another session on Taran's computer set it up, with its own new Neon
+   database). Verified: latest version, Azure voices, sign-up, full Listening run. Old accounts from the urbanthug
+   database are not in the new one; sign in once in the same browser and local progress merges in. The old
+   urbanthug project (ielts-coach-pi.vercel.app) is now stale. Planned nicer address: `ielts-yuvraj.vercel.app`
+   (Settings → Domains → Add, in Taran's project; not added yet).
 
 ## 6. Repositories — important
 
