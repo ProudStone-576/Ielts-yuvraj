@@ -36,6 +36,7 @@ The owner is not a developer. They want things explained simply, step by step, a
 
 ## 3. Current status (end of session 1, 29 Oct 2026)
 
+- **Live app: https://ielts-yuvraj.vercel.app** (custom name added 30 Oct; https://ielts-coach-fawn.vercel.app is the same project).
 - **Since session 4 the live app is https://ielts-coach-fawn.vercel.app** — Vercel project `ielts-coach` in the
   **proudstone-576** account, connected to GitHub: every push to `main` deploys automatically. Database = Neon
   project `ielts-coach` (`lucky-dream-63977253`) in the owner's own Neon account. The old urbanthug site
