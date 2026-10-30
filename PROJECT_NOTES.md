@@ -146,6 +146,24 @@ The owner is not a developer. They want things explained simply, step by step, a
    exam date, signed in from a fresh browser and saw it. A throwaway account `claude-test-…@example.com` remains in
    the database.
 
+### Session 3 (30 Oct 2026)
+
+1. Friend's feedback: wants **real exam timing**, and the voices "look like AI" — Listening Part 2 sounded like a
+   whisper and very slow. Cause: Kokoro's `af_nicole` is a whispering voice (116 wpm vs 165-185 elsewhere), and
+   loudness varied by 5 dB. Fixed: only Kokoro's best-rated voices, loudness normalised to -16 LUFS.
+2. **Listening rewritten to full length:** every script 2-3x longer (~8,700 words total, same questions and
+   answers), and Parts 1-3 have the real exam's mid-part break ("Before you hear the rest of the conversation,
+   you have some time to look at questions 7 to 10"), via `pause: { beforeLine, fromQuestion }` on the part.
+   Each half is its own recording (`pN-script.mp3`, `pN-script2.mp3`); narrator clips `pN-pause`/`pN-resume`.
+   `check:content` now also checks each written answer is heard in the right half. Whole test ≈ 22 min with
+   Kokoro (real CD-IELTS ≈ 30). Reading/Writing/Speaking timings already matched the real exam.
+3. Owner chose **Microsoft Azure** neural voices (free F0 tier). `make-audio.py` uses Azure when
+   `AZURE_SPEECH_KEY` (+ `AZURE_SPEECH_REGION`) is set, otherwise Kokoro; every line is cached in
+   `~/.cache/ielts-tts`. Network needs `<region>.tts.speech.microsoft.com` allowed. Waiting for the owner's key;
+   meanwhile the new scripts are recorded with Kokoro (all 87 written answers verified audible).
+4. Not live yet: the last token was for one deploy only; production needs a new token or the urbanthug ↔ GitHub
+   connection (see session 2, item 7).
+
 ## 6. Repositories — important
 
 - **`proudstone-576/c9orf72-als-proteostasis-study`** is the **friend's ALS research repo**. The cloud session
