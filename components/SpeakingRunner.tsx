@@ -12,6 +12,7 @@ import { playClip, unlockAudio } from "@/lib/audio";
 import { speak, type Playback } from "@/lib/speech";
 import { useStore } from "@/lib/storage";
 import type { SpeakingSet } from "@/lib/types";
+import { fluencyNote, fluencyReport } from "@/lib/speaking-feedback";
 import { buildSteps, examinerFor, EXAMINER_LINES, type Step } from "@/lib/speaking-script";
 import { formatClock, useCountdown } from "@/lib/useTimer";
 import { YuvrajSays } from "@/components/Yuvraj";
@@ -274,6 +275,7 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
 
   /* ---------- Assessment ---------- */
   const band = rubricBand(rubric, SPEAKING_CRITERIA.length);
+  const report = fluencyReport(set, results);
   return (
     <ExamFrame module="Speaking — Review your interview" candidate={store.name}>
       <div className="exam-scroll">
@@ -283,6 +285,20 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
               Play each part, read the transcript and notice where you hesitated or ran out of ideas. Then score
               yourself below. Longer answers with fewer fillers are the fastest way to raise your fluency score.
             </p>
+            {report.checks.length > 0 && (
+              <>
+                <p style={{ margin: 0 }}>
+                  <b>{report.summary}</b>
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: "1.2rem" }}>
+                  {report.checks.map((c) => (
+                    <li key={c.text}>
+                      {c.ok ? "✅" : "⚠️"} {c.text}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </YuvrajSays>
           {[1, 2, 3].map((p) => {
             const r = results[p];
@@ -324,7 +340,7 @@ export function SpeakingRunner({ set }: { set: SpeakingSet }) {
                   <button
                     className="btn primary"
                     onClick={() => {
-                      addAttempt({ module: "speaking", testId: set.id, title: set.title, band, notes: "self-assessed" });
+                      addAttempt({ module: "speaking", testId: set.id, title: set.title, band, notes: fluencyNote(set, results) });
                       setSavedBand(band);
                       setPhase("results");
                     }}
