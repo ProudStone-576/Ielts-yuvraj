@@ -8,6 +8,7 @@ import { signOut, useAuth } from "@/lib/storage";
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/plan", label: "Study plan" },
+  { href: "/mock", label: "Mock exam" },
   { href: "/listening", label: "Listening" },
   { href: "/drills", label: "Drills" },
   { href: "/reading", label: "Reading" },

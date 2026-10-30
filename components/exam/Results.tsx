@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { testFeedback } from "@/lib/coach";
 import { bandToClb, formatBand } from "@/lib/scoring";
 import type { Module, SkillScore } from "@/lib/types";
@@ -25,8 +26,16 @@ export function Results({
   children?: React.ReactNode;
 }) {
   const feedback = testFeedback(module, band, target, breakdown);
+  // During a mock exam day (?mock=1), point straight to the next paper.
+  const [mock, setMock] = useState(false);
+  useEffect(() => setMock(new URLSearchParams(window.location.search).has("mock")), []);
   return (
     <div className="results stack">
+      {mock && (
+        <Link className="btn primary lg" href="/mock" style={{ alignSelf: "flex-start" }}>
+          Continue the mock exam →
+        </Link>
+      )}
       <div className="card result-banner">
         {raw !== undefined && (
           <div>
